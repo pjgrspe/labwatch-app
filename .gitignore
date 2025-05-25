@@ -36,4 +36,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# API Keys
+APIKeys.ts
+
 app-example
