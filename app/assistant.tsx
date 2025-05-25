@@ -1,4 +1,4 @@
-// app/(tabs)/assistant.tsx
+// app/assistant.tsx (Moved from app/(tabs)/assistant.tsx)
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,15 +28,15 @@ export default function AssistantScreen() {
   const [inputText, setInputText] = useState('');
 
   const containerBackgroundColor = useThemeColor({}, 'background');
-  const inputContainerBackgroundColor = useThemeColor({}, 'cardBackground'); // Or specific color
-  const inputBackgroundColor = useThemeColor({light: '#fff', dark: '#2C2C2E'}, 'background'); // Example, using a valid ColorName as fallback
+  const inputContainerBackgroundColor = useThemeColor({}, 'cardBackground');
+  const inputBackgroundColor = useThemeColor({light: '#fff', dark: '#2C2C2E'}, 'background');
   const inputTextColor = useThemeColor({}, 'text');
   const inputBorderColor = useThemeColor({}, 'borderColor');
   const placeholderTextColor = useThemeColor({}, 'icon');
   const sendButtonColor = useThemeColor({}, 'tint');
   const userMessageBackgroundColor = useThemeColor({}, 'tint');
-  const userMessageTextColor = useThemeColor({light: '#FFFFFF', dark: '#FFFFFF'}, 'text'); // Usually contrasts with tint
-  const botMessageBackgroundColor = useThemeColor({ light: '#E5E5EA', dark: '#2C2C2E' }, 'cardBackground'); // Example
+  const userMessageTextColor = useThemeColor({light: '#FFFFFF', dark: '#FFFFFF'}, 'text');
+  const botMessageBackgroundColor = useThemeColor({ light: '#E5E5EA', dark: '#2C2C2E' }, 'cardBackground');
   const botMessageTextColor = useThemeColor({}, 'text');
   const timestampColor = useThemeColor({}, 'icon');
 
@@ -59,7 +59,7 @@ export default function AssistantScreen() {
       timestamp: new Date(Date.now() + 1000),
     };
 
-    setMessages(prevMessages => [newBotMessage, newUserMessage, ...prevMessages]); // Prepend for inverted list
+    setMessages(prevMessages => [newBotMessage, newUserMessage, ...prevMessages]);
     setInputText('');
   };
 
@@ -82,7 +82,7 @@ export default function AssistantScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.container, { backgroundColor: containerBackgroundColor }]}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0} 
+      keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0} // Adjusted for modal presentation
     >
       <FlatList
         data={messages}
@@ -90,7 +90,7 @@ export default function AssistantScreen() {
         keyExtractor={(item) => item.id}
         style={styles.messageList}
         contentContainerStyle={styles.messageListContent}
-        inverted 
+        inverted
       />
       <ThemedView style={[styles.inputContainer, { backgroundColor: inputContainerBackgroundColor, borderTopColor: inputBorderColor }]}>
         <TextInput
@@ -146,7 +146,9 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 12, // Added some vertical padding
+    paddingBottom: Platform.OS === 'ios' ? 25 : 12, // Adjust padding for keyboard
     borderTopWidth: 1,
   },
   input: {
