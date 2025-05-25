@@ -1,8 +1,10 @@
 // app/more/incidents.tsx
 import Card from '@/components/Card';
+import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
 const dummyIncidents = [
   { id: 'inc2024001', type: 'Minor Chemical Spill', date: '2024-03-10', reportedBy: 'Dr. Smith', status: 'Resolved' },
@@ -12,56 +14,55 @@ const dummyIncidents = [
 
 export default function IncidentsScreen() {
   const router = useRouter();
+  const containerBackgroundColor = useThemeColor({}, 'background');
+  const incidentTypeColor = useThemeColor({}, 'text');
+  const incidentInfoColor = useThemeColor({}, 'icon'); // For less prominent info
+  const incidentStatusColor = useThemeColor({}, 'icon');
+
 
   const renderIncidentItem = ({ item }: { item: typeof dummyIncidents[0] }) => (
     <TouchableOpacity onPress={() => router.push(`/incident-details/${item.id}`)}>
       <Card style={styles.incidentCard}>
-        <Text style={styles.incidentType}>{item.type}</Text>
-        <Text style={styles.incidentInfo}>Date: {item.date} | Reported by: {item.reportedBy}</Text>
-        <Text style={styles.incidentStatus}>Status: {item.status}</Text>
+        <ThemedText style={[styles.incidentType, { color: incidentTypeColor }]}>{item.type}</ThemedText>
+        <ThemedText style={[styles.incidentInfo, { color: incidentInfoColor }]}>Date: {item.date} | Reported by: {item.reportedBy}</ThemedText>
+        <ThemedText style={[styles.incidentStatus, { color: incidentStatusColor }]}>Status: {item.status}</ThemedText>
       </Card>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
       <FlatList
         data={dummyIncidents}
         renderItem={renderIncidentItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
       />
-      {/* Button to add new incident could go here, linking to a modal or new screen */}
-      {/* e.g. <Link href="/(modals)/report-incident" asChild>...</Link> */}
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f6f8',
   },
   listContent: {
     padding: 16,
   },
   incidentCard: {
-    marginBottom: 12,
+    marginBottom: 12, 
   },
   incidentType: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   incidentInfo: {
     fontSize: 14,
-    color: '#555',
     marginBottom: 2,
   },
   incidentStatus: {
     fontSize: 14,
-    color: '#777',
     fontStyle: 'italic',
   },
 });
