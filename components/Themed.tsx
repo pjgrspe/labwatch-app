@@ -1,12 +1,8 @@
-/**
- * Learn more about Light and Dark modes:
- * https://docs.expo.io/guides/color-schemes/
- */
-
+// labwatch-app/components/Themed.tsx
+import { ColorName } from '@/constants/Colors'; // Ensure Colors is imported if not just ColorName
+import { useThemeColor } from '@/hooks/useThemeColor'; // Corrected import
+import React from 'react';
 import { Text as DefaultText, View as DefaultView } from 'react-native';
-
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 type ThemeProps = {
   lightColor?: string;
@@ -16,30 +12,23 @@ type ThemeProps = {
 export type TextProps = ThemeProps & DefaultText['props'];
 export type ViewProps = ThemeProps & DefaultView['props'];
 
-export function useThemeColor(
-  props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
-) {
-  const theme = useColorScheme() ?? 'light';
-  const colorFromProps = props[theme];
-
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
-  }
-}
+// This local useThemeColor function is fine if you prefer to keep it co-located,
+// but it duplicates the one in hooks/useThemeColor.ts.
+// It's generally better to import the hook from a single source.
+// For this example, I'll assume you want to use the imported hook for clarity.
 
 export function Text(props: TextProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  // Assuming 'text' is a valid ColorName defined in your Colors.ts
+  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text' as ColorName);
 
   return <DefaultText style={[{ color }, style]} {...otherProps} />;
 }
 
 export function View(props: ViewProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
-  const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
+  // Assuming 'background' is a valid ColorName defined in your Colors.ts
+  const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background' as ColorName);
 
   return <DefaultView style={[{ backgroundColor }, style]} {...otherProps} />;
 }

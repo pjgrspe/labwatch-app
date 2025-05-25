@@ -1,28 +1,32 @@
-// app/(tabs)/_layout.tsx
+// labwatch-app/app/(tabs)/_layout.tsx
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-// import { useColorScheme } from '@/hooks/useColorScheme'; // If you have this hook
-// import { Colors } from '@/constants/Colors'; // If you have these constants
-
-const tabBarActiveTintColor = 'blue'; // Replace with your theme color
-const tabBarInactiveTintColor = 'gray'; // Replace with your theme color
 
 export default function TabLayout() {
-  // const colorScheme = useColorScheme() ?? 'light'; // Example usage
+  const colorScheme = useColorScheme() ?? 'light';
 
   return (
     <Tabs
       screenOptions={{
-        // tabBarActiveTintColor: Colors[colorScheme].tint, // Example theme usage
-        tabBarActiveTintColor: tabBarActiveTintColor,
-        tabBarInactiveTintColor: tabBarInactiveTintColor,
-        headerShown: false, // Typically, individual tab screens manage their own headers if needed
+        tabBarActiveTintColor: Colors[colorScheme].tint,
+        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
+        // Common header styles for tabs that show a header
+        headerStyle: {
+          backgroundColor: Colors[colorScheme].headerBackground,
+        },
+        headerTintColor: Colors[colorScheme].headerTint,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Index',
+          title: 'Dashboard',
+          headerShown: true, 
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
@@ -32,16 +36,17 @@ export default function TabLayout() {
         name="alerts"
         options={{
           title: 'Alerts',
+          headerShown: true, 
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
-          // Example: tabBarBadge: 3,
         }}
       />
       <Tabs.Screen
         name="assistant"
         options={{
-          title: 'Assistant',
+          title: 'AI Assistant', 
+          headerShown: true, 
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
           ),
@@ -51,7 +56,7 @@ export default function TabLayout() {
         name="more"
         options={{
           title: 'More',
-          headerShown: false, // The 'more' screen will use its own stack navigator's header
+          headerShown: false, 
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="menu-outline" size={size} color={color} />
           ),
