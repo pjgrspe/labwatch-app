@@ -1,75 +1,165 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// app/(tabs)/index.tsx (formerly dashboard.tsx)
+import Card from '@/components/Card'; // Assuming alias @ is set up for root
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// Dummy Data
+const sensorData = [
+  { id: '1', name: 'Temperature Lab A', value: '22.5°C', status: 'normal' },
+  { id: '2', name: 'Air Quality Lab A', value: 'Good', status: 'normal' },
+  { id: '3', name: 'Freezer 1 Temp', value: '-18°C', status: 'warning' },
+  { id: '4', name: 'Gas Levels Lab B', value: '0.1 ppm CO', status: 'normal' },
+];
 
-export default function HomeScreen() {
+const equipmentStatus = [
+  { id: 'eq1', name: 'Fume Hood 1', status: 'Operational', icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap, color: 'green' },
+  { id: 'eq2', name: 'Centrifuge Alpha', status: 'Maintenance Due', icon: 'warning' as keyof typeof Ionicons.glyphMap, color: 'orange' },
+  { id: 'eq3', name: 'Autoclave Beta', status: 'Offline', icon: 'close-circle' as keyof typeof Ionicons.glyphMap, color: 'red' },
+];
+
+const predictionData = {
+  nextMaintenance: 'Centrifuge Alpha - 3 days',
+  potentialHazard: 'Elevated VOCs possible in Lab C tomorrow AM',
+};
+
+const { width } = Dimensions.get('window');
+
+export default function DashboardScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
+      <Text style={styles.headerTitle}>LabWatch Dashboard</Text>
+
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Sensor Overview</Text>
+        {sensorData.map((sensor) => (
+          <View key={sensor.id} style={styles.sensorItem}>
+            <Text style={styles.sensorName}>{sensor.name}:</Text>
+            <Text style={[styles.sensorValue, sensor.status === 'warning' && styles.warningText]}>
+              {sensor.value}
+            </Text>
+          </View>
+        ))}
+      </Card>
+
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Equipment Status</Text>
+        {equipmentStatus.map((equip) => (
+          <View key={equip.id} style={styles.equipmentItem}>
+            <Ionicons name={equip.icon} size={24} color={equip.color} style={styles.equipmentIcon} />
+            <Text style={styles.equipmentName}>{equip.name}:</Text>
+            <Text style={[styles.equipmentStatus, { color: equip.color }]}>{equip.status}</Text>
+          </View>
+        ))}
+      </Card>
+
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Predictive Analytics</Text>
+        <View style={styles.predictionItem}>
+          <Ionicons name="build-outline" size={20} color="#4A90E2" style={styles.predictionIcon} />
+          <Text style={styles.predictionText}>Next Maintenance: {predictionData.nextMaintenance}</Text>
+        </View>
+        <View style={styles.predictionItem}>
+          <Ionicons name="alert-circle-outline" size={20} color="#D0021B" style={styles.predictionIcon} />
+          <Text style={styles.predictionText}>Potential Hazard: {predictionData.potentialHazard}</Text>
+        </View>
+      </Card>
+
+      {/* Placeholder for charts - you'd integrate a charting library here */}
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Visualizations (Placeholder)</Text>
+        <View style={styles.chartPlaceholder}>
+          <Text>Chart for Temperature Trends</Text>
+        </View>
+        <View style={styles.chartPlaceholder}>
+          <Text>Chart for Gas Levels</Text>
+        </View>
+      </Card>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f4f6f8',
+  },
+  container: {
+    padding: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+    textAlign: 'center',
+  },
+  sectionCard: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#4A4A4A',
+  },
+  sensorItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  sensorName: {
+    fontSize: 16,
+    color: '#555',
+  },
+  sensorValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  warningText: {
+    color: 'orange',
+  },
+  equipmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  equipmentIcon: {
+    marginRight: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  equipmentName: {
+    fontSize: 16,
+    color: '#555',
+    flex: 1,
+  },
+  equipmentStatus: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  predictionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  predictionIcon: {
+    marginRight: 8,
+  },
+  predictionText: {
+    fontSize: 15,
+    color: '#333',
+    flexShrink: 1, // Allow text to wrap
+  },
+  chartPlaceholder: {
+    height: 150,
+    backgroundColor: '#e9ecef',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
 });
