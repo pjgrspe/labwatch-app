@@ -40,18 +40,25 @@ export default function RootLayout() {
             fontWeight: 'bold',
           },
         }}>
+        {/* The initial route for "/" (app/index.tsx) handles redirection itself */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+
+        {/* This tells Expo Router to use app/(tabs)/_layout.tsx for the tab navigation */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+        {/* This tells Expo Router to use app/auth/_layout.tsx for all auth related routes.
+            DO NOT list individual auth screens here, as they are managed by app/auth/_layout.tsx */}
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'modal' }} />
+
+        {/* Other specific routes outside of (tabs) or auth stacks */}
         <Stack.Screen name="assistant" options={{ title: 'AI Assistant', presentation: 'modal' }} />
         <Stack.Screen name="alert-details/[id]" options={{ title: 'Alert Details' }} />
         <Stack.Screen name="protocol-details/[id]" options={{ title: 'Protocol Details' }} />
         <Stack.Screen name="incident-details/[id]" options={{ title: 'Incident Details' }} />
         <Stack.Screen name="profile" options={{ title: 'User Profile' }} />
-        {/* Add new modal screen for adding rooms */}
         <Stack.Screen name="modals/add-room" options={{ title: 'Add New Room', presentation: 'modal' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
-      {/* <FloatingAssistantButton /> */}
     </View>
   );
 }
