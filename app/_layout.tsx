@@ -8,11 +8,23 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 
+// Import desired Montserrat font variants
+import {
+  Montserrat_400Regular,
+  Montserrat_500Medium,
+  Montserrat_600SemiBold,
+  Montserrat_700Bold,
+} from '@expo-google-fonts/montserrat'; //
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // 'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'), // Remove or comment out if not needed
+    'Montserrat-Regular': Montserrat_400Regular, //
+    'Montserrat-Medium': Montserrat_500Medium,   //
+    'Montserrat-SemiBold': Montserrat_600SemiBold, //
+    'Montserrat-Bold': Montserrat_700Bold,     //
     ...Ionicons.font,
   });
 
