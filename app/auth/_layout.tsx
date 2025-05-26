@@ -1,13 +1,13 @@
-// labwatch-app/app/auth/_layout.tsx
 import { Stack } from 'expo-router';
-import React from 'react';
 
 export default function AuthLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="login" options={{ title: 'Login', headerShown: false }} />
-      {/* Add other auth screens here if needed, e.g., register, forgot-password */}
-      {/* <Stack.Screen name="register" options={{ title: 'Register' }} /> */}
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" options={{ title: 'Auth Home' }} />
+      <Stack.Screen name="login" options={{ title: 'Login' }} />
+      <Stack.Screen name="signup" options={{ title: 'Sign Up' }} />
+      <Stack.Screen name="denied" options={{ title: 'Access Denied' }} />
+      <Stack.Screen name="pending-approval" options={{ title: 'Pending Approval' }} />
     </Stack>
   );
 }

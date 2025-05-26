@@ -1,11 +1,11 @@
-// labwatch-app/app/(tabs)/more/_layout.tsx
+// app/(tabs)/more/admin/_layout.tsx
 import { Colors } from '@/constants/Colors';
 import Layout from '@/constants/Layout';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Stack } from 'expo-router';
 import React from 'react';
 
-export default function MoreLayout() {
+export default function AdminLayout() {
   const colorScheme = useColorScheme() ?? 'light';
 
   return (
@@ -20,12 +20,8 @@ export default function MoreLayout() {
           fontSize: Layout.fontSize.header,
         },
       }}>
-      <Stack.Screen name="index" options={{ title: 'More Options' }} />
-      <Stack.Screen name="protocols" options={{ title: 'Emergency Protocols' }} />
-      <Stack.Screen name="incidents" options={{ title: 'Incident History' }} />
-      <Stack.Screen name="knowledge-base" options={{ title: 'Knowledge Base' }} />
-      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-      <Stack.Screen name="admin" options={{ headerShown: false, title: "Admin Section" }} />
+      <Stack.Screen name="manage-users" options={{ title: 'Manage User Signups' }} />
+      {/* Add other admin screens here if needed */}
     </Stack>
   );
 }
