@@ -1,8 +1,10 @@
 // app/more/knowledge-base.tsx
 import Card from '@/components/Card';
+import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 const dummyKBArticles = [
   { id: 'sop001', title: 'Standard Operating Procedure for PCR', category: 'SOP', keywords: ['pcr', 'molecular biology', 'dna'] },
@@ -13,6 +15,16 @@ const dummyKBArticles = [
 
 export default function KnowledgeBaseScreen() {
   const [searchTerm, setSearchTerm] = useState('');
+
+  const containerBackgroundColor = useThemeColor({}, 'background');
+  const searchContainerBackgroundColor = useThemeColor({}, 'cardBackground');
+  const searchIconColor = useThemeColor({}, 'icon');
+  const searchInputColor = useThemeColor({}, 'text');
+  const placeholderTextColor = useThemeColor({}, 'icon');
+  const articleTitleColor = useThemeColor({}, 'text');
+  const articleCategoryColor = useThemeColor({}, 'icon');
+
+
   const filteredArticles = dummyKBArticles.filter(article =>
     article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article.keywords.some(keyword => keyword.includes(searchTerm.toLowerCase()))
@@ -21,48 +33,47 @@ export default function KnowledgeBaseScreen() {
   const renderArticleItem = ({ item }: { item: typeof dummyKBArticles[0] }) => (
     <TouchableOpacity onPress={() => {/* Navigate to article details if implemented */}}>
       <Card style={styles.articleCard}>
-        <Text style={styles.articleTitle}>{item.title}</Text>
-        <Text style={styles.articleCategory}>Category: {item.category}</Text>
+        <ThemedText style={[styles.articleTitle, { color: articleTitleColor }]}>{item.title}</ThemedText>
+        <ThemedText style={[styles.articleCategory, { color: articleCategoryColor }]}>Category: {item.category}</ThemedText>
       </Card>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#888" style={styles.searchIcon} />
+    <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
+      <ThemedView style={[styles.searchContainer, { backgroundColor: searchContainerBackgroundColor }]}>
+        <Ionicons name="search-outline" size={20} color={searchIconColor} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, {color: searchInputColor}]}
           placeholder="Search SOPs, MSDS, Guides..."
+          placeholderTextColor={placeholderTextColor}
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-      </View>
+      </ThemedView>
       <FlatList
         data={filteredArticles}
         renderItem={renderArticleItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
       />
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f6f8',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 10,
     margin: 16,
     borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
+    elevation: 2, // Keep for Android
+    shadowColor: '#000', // Keep for iOS
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -84,11 +95,9 @@ const styles = StyleSheet.create({
   articleTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   articleCategory: {
     fontSize: 13,
-    color: '#777',
   },
 });

@@ -1,7 +1,9 @@
-// app/(tabs)/assistant.tsx
+// app/assistant.tsx (Moved from app/(tabs)/assistant.tsx)
+import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 interface Message {
   id: string;
@@ -15,7 +17,6 @@ const initialMessages: Message[] = [
   { id: '2', text: 'Ask about SOPs, chemical hazards, or emergency procedures.', sender: 'bot', timestamp: new Date(Date.now() + 1000) },
 ];
 
-// Dummy responses
 const botResponses: { [key: string]: string } = {
   "fire": "In case of fire: 1. Activate the nearest fire alarm. 2. Evacuate immediately using the nearest exit. 3. Do not use elevators. 4. Assemble at the designated meeting point.",
   "spill": "For a chemical spill: 1. Alert personnel nearby. 2. If safe, contain the spill with appropriate spill kit materials. 3. Refer to MSDS for specific chemical procedures. 4. Report to safety manager.",
@@ -25,6 +26,20 @@ const botResponses: { [key: string]: string } = {
 export default function AssistantScreen() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
+
+  const containerBackgroundColor = useThemeColor({}, 'background');
+  const inputContainerBackgroundColor = useThemeColor({}, 'cardBackground');
+  const inputBackgroundColor = useThemeColor({light: '#fff', dark: '#2C2C2E'}, 'background');
+  const inputTextColor = useThemeColor({}, 'text');
+  const inputBorderColor = useThemeColor({}, 'borderColor');
+  const placeholderTextColor = useThemeColor({}, 'icon');
+  const sendButtonColor = useThemeColor({}, 'tint');
+  const userMessageBackgroundColor = useThemeColor({}, 'tint');
+  const userMessageTextColor = useThemeColor({light: '#FFFFFF', dark: '#FFFFFF'}, 'text');
+  const botMessageBackgroundColor = useThemeColor({ light: '#E5E5EA', dark: '#2C2C2E' }, 'cardBackground');
+  const botMessageTextColor = useThemeColor({}, 'text');
+  const timestampColor = useThemeColor({}, 'icon');
+
 
   const handleSend = () => {
     if (inputText.trim().length === 0) return;
@@ -44,51 +59,51 @@ export default function AssistantScreen() {
       timestamp: new Date(Date.now() + 1000),
     };
 
-    setMessages(prevMessages => [...prevMessages, newUserMessage, newBotMessage]);
+    setMessages(prevMessages => [newBotMessage, newUserMessage, ...prevMessages]);
     setInputText('');
   };
 
   const renderMessageItem = ({ item }: { item: Message }) => (
-    <View style={[
+    <ThemedView style={[
       styles.messageBubble,
-      item.sender === 'user' ? styles.userMessage : styles.botMessage
+      item.sender === 'user' ? styles.userMessage : styles.botMessage,
+      item.sender === 'user' ? { backgroundColor: userMessageBackgroundColor } : { backgroundColor: botMessageBackgroundColor }
     ]}>
-      <Text style={item.sender === 'user' ? styles.userMessageText : styles.botMessageText}>
+      <ThemedText style={item.sender === 'user' ? [styles.userMessageText, {color: userMessageTextColor}] : [styles.botMessageText, {color: botMessageTextColor}]}>
         {item.text}
-      </Text>
-      <Text style={styles.timestamp}>
+      </ThemedText>
+      <ThemedText style={[styles.timestamp, { color: timestampColor }]}>
         {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </View>
+      </ThemedText>
+    </ThemedView>
   );
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0} // Adjust as needed
+      style={[styles.container, { backgroundColor: containerBackgroundColor }]}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0} // Adjusted for modal presentation
     >
-      <Text style={styles.headerTitle}>Lab Safety AI Assistant</Text>
       <FlatList
         data={messages}
         renderItem={renderMessageItem}
         keyExtractor={(item) => item.id}
         style={styles.messageList}
         contentContainerStyle={styles.messageListContent}
-        inverted // To show latest messages at the bottom, but needs data reordering
+        inverted
       />
-      <View style={styles.inputContainer}>
+      <ThemedView style={[styles.inputContainer, { backgroundColor: inputContainerBackgroundColor, borderTopColor: inputBorderColor }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
           value={inputText}
           onChangeText={setInputText}
           placeholder="Ask about 'fire' or 'spill'..."
-          placeholderTextColor="#999"
+          placeholderTextColor={placeholderTextColor}
         />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+        <TouchableOpacity onPress={handleSend} style={[styles.sendButton, { backgroundColor: sendButtonColor }]}>
           <Ionicons name="send" size={24} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </ThemedView>
     </KeyboardAvoidingView>
   );
 }
@@ -96,17 +111,6 @@ export default function AssistantScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f6f8',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    padding: 16,
-    paddingTop: Platform.OS === 'android' ? 20 : 10,
-    backgroundColor: '#fff',
-    textAlign: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   messageList: {
     flex: 1,
@@ -122,48 +126,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   userMessage: {
-    backgroundColor: '#007AFF',
     alignSelf: 'flex-end',
     borderBottomRightRadius: 2,
   },
   botMessage: {
-    backgroundColor: '#E5E5EA',
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 2,
   },
   userMessageText: {
-    color: '#fff',
     fontSize: 15,
   },
   botMessageText: {
-    color: '#000',
     fontSize: 15,
   },
   timestamp: {
     fontSize: 10,
-    color: '#999',
     alignSelf: 'flex-end',
     marginTop: 4,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 12, // Added some vertical padding
+    paddingBottom: Platform.OS === 'ios' ? 25 : 12, // Adjust padding for keyboard
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    backgroundColor: '#fff',
   },
   input: {
     flex: 1,
     height: 40,
-    borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 15,
     marginRight: 10,
-    backgroundColor: '#fff'
   },
   sendButton: {
-    backgroundColor: '#007AFF',
     borderRadius: 20,
     width: 40,
     height: 40,

@@ -1,10 +1,12 @@
 // app/(tabs)/index.tsx (formerly dashboard.tsx)
-import Card from '@/components/Card'; // Assuming alias @ is set up for root
+import Card from '@/components/Card';
+import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { ColorName } from '@/constants/Colors'; // Import ColorName
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
-// Dummy Data
 const sensorData = [
   { id: '1', name: 'Temperature Lab A', value: '22.5°C', status: 'normal' },
   { id: '2', name: 'Air Quality Lab A', value: 'Good', status: 'normal' },
@@ -13,9 +15,9 @@ const sensorData = [
 ];
 
 const equipmentStatus = [
-  { id: 'eq1', name: 'Fume Hood 1', status: 'Operational', icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap, color: 'green' },
-  { id: 'eq2', name: 'Centrifuge Alpha', status: 'Maintenance Due', icon: 'warning' as keyof typeof Ionicons.glyphMap, color: 'orange' },
-  { id: 'eq3', name: 'Autoclave Beta', status: 'Offline', icon: 'close-circle' as keyof typeof Ionicons.glyphMap, color: 'red' },
+  { id: 'eq1', name: 'Fume Hood 1', status: 'Operational', icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap, colorToken: 'successText' as ColorName },
+  { id: 'eq2', name: 'Centrifuge Alpha', status: 'Maintenance Due', icon: 'warning' as keyof typeof Ionicons.glyphMap, colorToken: 'warningText' as ColorName },
+  { id: 'eq3', name: 'Autoclave Beta', status: 'Offline', icon: 'close-circle' as keyof typeof Ionicons.glyphMap, colorToken: 'errorText' as ColorName },
 ];
 
 const predictionData = {
@@ -23,57 +25,67 @@ const predictionData = {
   potentialHazard: 'Elevated VOCs possible in Lab C tomorrow AM',
 };
 
-const { width } = Dimensions.get('window');
-
 export default function DashboardScreen() {
+  const scrollViewBackgroundColor = useThemeColor({}, 'background');
+  const sectionTitleColor = useThemeColor({ light: '#4A4A4A', dark: '#CCCCCC' }, 'text'); // Explicitly using text as fallback
+  const sensorNameColor = useThemeColor({ light: '#555', dark: '#bbb' }, 'text');
+  const sensorValueColor = useThemeColor({ light: '#333', dark: '#ddd' }, 'text');
+  const warningTextColor = useThemeColor({}, 'warningText');
+  const equipmentNameColor = useThemeColor({ light: '#555', dark: '#bbb' }, 'text');
+  const predictionTextColor = useThemeColor({ light: '#333', dark: '#ddd' }, 'text');
+  const chartPlaceholderBackgroundColor = useThemeColor({ light: '#e9ecef', dark: '#3A3A3C' }, 'cardBackground');
+  const iconColorBlue = useThemeColor({}, 'infoText');
+  const iconColorRed = useThemeColor({}, 'errorText');
+  const cardBorderColor = useThemeColor({}, 'borderColor');
+
+  const getEquipmentIconColor = (token: ColorName) => useThemeColor({}, token);
+
+
   return (
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-      <Text style={styles.headerTitle}>LabWatch Dashboard</Text>
-
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Sensor Overview</Text>
+    <ScrollView style={[styles.scrollView, { backgroundColor: scrollViewBackgroundColor }]} contentContainerStyle={styles.container}>
+      <Card>
+        <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>Sensor Overview</ThemedText>
         {sensorData.map((sensor) => (
-          <View key={sensor.id} style={styles.sensorItem}>
-            <Text style={styles.sensorName}>{sensor.name}:</Text>
-            <Text style={[styles.sensorValue, sensor.status === 'warning' && styles.warningText]}>
+          <ThemedView key={sensor.id} style={[styles.sensorItem, { borderBottomColor: cardBorderColor }]}>
+            <ThemedText style={[styles.sensorName, { color: sensorNameColor }]}>{sensor.name}:</ThemedText>
+            <ThemedText style={[styles.sensorValue, { color: sensor.status === 'warning' ? warningTextColor : sensorValueColor }]}>
               {sensor.value}
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
         ))}
       </Card>
 
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Equipment Status</Text>
+      <Card>
+        <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>Equipment Status</ThemedText>
         {equipmentStatus.map((equip) => (
-          <View key={equip.id} style={styles.equipmentItem}>
-            <Ionicons name={equip.icon} size={24} color={equip.color} style={styles.equipmentIcon} />
-            <Text style={styles.equipmentName}>{equip.name}:</Text>
-            <Text style={[styles.equipmentStatus, { color: equip.color }]}>{equip.status}</Text>
-          </View>
+          <ThemedView key={equip.id} style={[styles.equipmentItem, { borderBottomColor: cardBorderColor }]}>
+            <Ionicons name={equip.icon} size={24} color={getEquipmentIconColor(equip.colorToken)} style={styles.equipmentIcon} />
+            <ThemedText style={[styles.equipmentName, { color: equipmentNameColor }]}>{equip.name}:</ThemedText>
+            <ThemedText style={[styles.equipmentStatus, { color: getEquipmentIconColor(equip.colorToken) }]}>{equip.status}</ThemedText>
+          </ThemedView>
         ))}
       </Card>
 
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Predictive Analytics</Text>
-        <View style={styles.predictionItem}>
-          <Ionicons name="build-outline" size={20} color="#4A90E2" style={styles.predictionIcon} />
-          <Text style={styles.predictionText}>Next Maintenance: {predictionData.nextMaintenance}</Text>
-        </View>
-        <View style={styles.predictionItem}>
-          <Ionicons name="alert-circle-outline" size={20} color="#D0021B" style={styles.predictionIcon} />
-          <Text style={styles.predictionText}>Potential Hazard: {predictionData.potentialHazard}</Text>
-        </View>
+      <Card>
+        <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>Predictive Analytics</ThemedText>
+        <ThemedView style={styles.predictionItem}>
+          <Ionicons name="build-outline" size={20} color={iconColorBlue} style={styles.predictionIcon} />
+          <ThemedText style={[styles.predictionText, { color: predictionTextColor }]}>Next Maintenance: {predictionData.nextMaintenance}</ThemedText>
+        </ThemedView>
+        <ThemedView style={styles.predictionItem}>
+          <Ionicons name="alert-circle-outline" size={20} color={iconColorRed} style={styles.predictionIcon} />
+          <ThemedText style={[styles.predictionText, { color: predictionTextColor }]}>Potential Hazard: {predictionData.potentialHazard}</ThemedText>
+        </ThemedView>
       </Card>
 
-      {/* Placeholder for charts - you'd integrate a charting library here */}
-      <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Visualizations (Placeholder)</Text>
-        <View style={styles.chartPlaceholder}>
-          <Text>Chart for Temperature Trends</Text>
-        </View>
-        <View style={styles.chartPlaceholder}>
-          <Text>Chart for Gas Levels</Text>
-        </View>
+      <Card>
+        <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>Visualizations (Placeholder)</ThemedText>
+        <ThemedView style={[styles.chartPlaceholder, {backgroundColor: chartPlaceholderBackgroundColor}]}>
+          <ThemedText>Chart for Temperature Trends</ThemedText>
+        </ThemedView>
+        <ThemedView style={[styles.chartPlaceholder, {backgroundColor: chartPlaceholderBackgroundColor}]}>
+          <ThemedText>Chart for Gas Levels</ThemedText>
+        </ThemedView>
       </Card>
     </ScrollView>
   );
@@ -82,59 +94,42 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#f4f6f8',
   },
   container: {
     padding: 16,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
-    textAlign: 'center',
-  },
-  sectionCard: {
-    marginBottom: 20,
-  },
+  // Card itself will handle its marginBottom if defined in its own styles
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#4A4A4A',
   },
   sensorItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomWidth: StyleSheet.hairlineWidth, // Using hairlineWidth for subtle separators
+    backgroundColor: 'transparent',
   },
   sensorName: {
     fontSize: 16,
-    color: '#555',
   },
   sensorValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
-  },
-  warningText: {
-    color: 'orange',
   },
   equipmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
   },
   equipmentIcon: {
     marginRight: 10,
   },
   equipmentName: {
     fontSize: 16,
-    color: '#555',
     flex: 1,
   },
   equipmentStatus: {
@@ -145,18 +140,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
+    backgroundColor: 'transparent',
   },
   predictionIcon: {
     marginRight: 8,
   },
   predictionText: {
     fontSize: 15,
-    color: '#333',
-    flexShrink: 1, // Allow text to wrap
+    flexShrink: 1,
   },
   chartPlaceholder: {
     height: 150,
-    backgroundColor: '#e9ecef',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
