@@ -1,9 +1,7 @@
 // labwatch-app/modules/dashboard/components/QuickActionsCarousel.tsx
-import SectionHeader from '@/components/SectionHeader';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme } from '@/hooks/useThemeColor';
+import { SectionHeader, ThemedText, ThemedView } from '@/components';
+import { Colors, Layout } from '@/constants';
+import { useCurrentTheme } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -107,7 +105,7 @@ const QuickActionsCarousel = () => {
       iconName: "alert-circle-outline", // More indicative of an incident
       backgroundColor: currentThemeColors.errorText, 
       priority: 'high',
-      onPress: () => router.push('/(tabs)/more/incidents') 
+      onPress: () => router.push('/(tabs)/incidents' as any) 
     },
     { 
       label: "Safety Protocols", 

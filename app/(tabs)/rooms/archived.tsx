@@ -1,11 +1,9 @@
 // labwatch-app/app/(tabs)/rooms/archived.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { RoomService } from '@/modules/rooms/services/RoomService';
-import { Room } from '@/types/rooms';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { Colors, Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
+import { Rooms } from '@/modules';
+import { Room } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -257,7 +255,7 @@ export default function ArchivedRoomsScreen() {
   const fetchArchivedRooms = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setIsLoading(true);
     try {
-      const rooms = await RoomService.getArchivedRooms();
+      const rooms = await Rooms.RoomService.getArchivedRooms();
       setArchivedRooms(rooms);
       applyFilters(rooms, searchTerm);
     } catch (error) {
@@ -286,7 +284,7 @@ export default function ArchivedRoomsScreen() {
 
   useEffect(() => {
     fetchArchivedRooms();
-    const unsubscribe = RoomService.onArchivedRoomsUpdate(
+    const unsubscribe = Rooms.RoomService.onArchivedRoomsUpdate(
       (updatedRooms) => {
         setArchivedRooms(updatedRooms);
         applyFilters(updatedRooms, searchTerm);
@@ -373,7 +371,7 @@ export default function ArchivedRoomsScreen() {
           style: 'default',
           onPress: async () => {
             try {
-              await RoomService.restoreRoom(room.id);
+              await Rooms.RoomService.restoreRoom(room.id);
               Alert.alert('Success', `Room "${room.name}" has been restored.`);
             } catch (error: any) {
               console.error('Failed to restore room:', error);
@@ -396,7 +394,7 @@ export default function ArchivedRoomsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await RoomService.deleteRoom(room.id);
+              await Rooms.RoomService.deleteRoom(room.id);
               Alert.alert('Success', `Room "${room.name}" has been permanently deleted.`);
             } catch (error: any) {
               console.error('Failed to delete room:', error);

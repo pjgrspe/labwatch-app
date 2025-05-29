@@ -1,7 +1,7 @@
 // app/auth/login.tsx
-import { Text as ThemedText } from '@/components/Themed';
+import { ThemedText } from '@/components';
 import { app, auth } from '@/FirebaseConfig'; // Assuming app is exported
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';

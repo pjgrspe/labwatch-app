@@ -1,7 +1,6 @@
 // app/(tabs)/more/protocols/index.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router'; // Import Stack
 import React from 'react';

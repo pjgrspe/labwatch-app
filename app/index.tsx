@@ -1,7 +1,7 @@
 // labwatch-app/app/index.tsx
-import { Text as ThemedText } from '@/components/Themed'; // Ensure ThemedView is imported if View below is ThemedView
+import { ThemedText } from '@/components';
 import { auth } from '@/FirebaseConfig';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks';
 import { AuthService } from '@/modules/auth/services/AuthService';
 import { SplashScreen, useRouter } from 'expo-router';
 import { onAuthStateChanged, signOut } from 'firebase/auth';

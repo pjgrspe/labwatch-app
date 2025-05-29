@@ -1,7 +1,6 @@
 // labwatch-app/app/protocol-details/[id].tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import React from 'react';

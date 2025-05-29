@@ -1,6 +1,6 @@
-import { Text as ThemedText } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ThemedText } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { getGaugeRangeForSensor } from '@/modules/alerts/services/AlertService';
 import { interpolateColor, polarToCartesian } from '@/utils/dialGauge';
 import React, { useEffect, useRef } from 'react';
@@ -29,8 +29,8 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   unit,
   min,
   max,
-  coldColor = '#06B6D4', // Modern cyan
-  hotColor = '#EF4444',
+  coldColor = '#3B82F6', // Clean blue
+  hotColor = '#EF4444',   // Clean red
   dangerLevel,
   size = 150,
   statusColor,
@@ -39,16 +39,13 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   useAlertBasedRange = false,
 }) => {
   const themeTextColor = useThemeColor({}, 'text');
-  const innerCircleFillColor = useThemeColor({}, 'cardBackground');
   const trackBackgroundColor = useThemeColor({}, 'borderColor');
-  const indicatorKnobColor = useThemeColor({}, 'tint');
-  const dangerMarkerColor = '#F59E0B'; // Amber warning color
-  const criticalColor = '#DC2626'; // Red critical color
-  const successColor = '#10B981'; // Green success color
+  const dangerMarkerColor = '#F59E0B';
+  const criticalColor = '#DC2626';
 
-  // Animation refs
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Minimal animation refs
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Get alert-based range if enabled
   const alertRange = useAlertBasedRange && sensorType && dataType 
@@ -60,14 +57,14 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   const finalDangerLevel = alertRange?.dangerLevel ?? dangerLevel;
   const finalUnit = alertRange?.unit ?? unit ?? '';
 
-  // Modern gauge configuration
+  // Clean gauge configuration
   const center = size / 2;
-  const strokeWidth = size * 0.08; // Slightly thinner for cleaner look
+  const strokeWidth = size * 0.06; // Thinner stroke for minimal look
   const radius = (size - strokeWidth) / 2 - size * 0.08;
   
-  // Arc configuration (270 degrees)
-  const startAngle = 225; // Start from bottom-left
-  const totalAngle = 270;
+  // Arc configuration (240 degrees for clean sweep)
+  const startAngle = 240;
+  const totalAngle = 240;
 
   // Value calculations
   const clampedValue = Math.min(Math.max(value, finalMin), finalMax);
@@ -78,58 +75,54 @@ const DialGauge: React.FC<DialGaugeProps> = ({
     ? (finalDangerLevel - finalMin) / (finalMax - finalMin)
     : -1;
 
-  // Determine status based on value
+  // Minimal status determination
   const getStatusInfo = () => {
     if (finalDangerLevel !== undefined && clampedValue >= finalDangerLevel) {
       const criticalThreshold = finalDangerLevel + (finalMax - finalDangerLevel) * 0.5;
       if (clampedValue >= criticalThreshold) {
-        return { color: criticalColor, status: 'CRITICAL', pulse: true, icon: '⚠️' };
+        return { color: criticalColor, status: 'CRITICAL', pulse: true };
       }
-      return { color: dangerMarkerColor, status: 'WARNING', pulse: false, icon: '⚡' };
+      return { color: dangerMarkerColor, status: 'WARNING', pulse: false };
     }
     return { 
       color: statusColor || interpolateColor(coldColor, hotColor, percentage), 
       status: 'NORMAL', 
-      pulse: false,
-      icon: '✓'
+      pulse: false
     };
   };
 
   const statusInfo = getStatusInfo();
 
-  // Start pulse animation for critical alerts
+  // Subtle animations
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 80,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
   useEffect(() => {
     if (statusInfo.pulse) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.3,
-            duration: 800,
+            toValue: 1.08,
+            duration: 1000,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 800,
+            duration: 1000,
             useNativeDriver: true,
           }),
         ])
       );
       pulse.start();
       return () => pulse.stop();
-    } else {
-      pulseAnim.setValue(1);
     }
   }, [statusInfo.pulse, pulseAnim]);
-
-  // Scale animation on mount
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      tension: 50,
-      friction: 7,
-      useNativeDriver: true,
-    }).start();
-  }, [scaleAnim]);
 
   // Create arc path
   const createArcPath = (startAngle: number, endAngle: number, radius: number) => {
@@ -146,7 +139,7 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   const progressAngle = totalAngle * percentage;
   const progressPath = createArcPath(startAngle, startAngle + progressAngle, radius);
 
-  // Danger zone arc (if applicable)
+  // Danger zone arc
   const dangerPath = dangerPercentage >= 0 && dangerPercentage <= 1 
     ? createArcPath(startAngle + (totalAngle * dangerPercentage), startAngle + totalAngle, radius)
     : null;
@@ -155,11 +148,10 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   const indicatorAngle = startAngle + (totalAngle * percentage);
   const indicatorPos = polarToCartesian(center, center, radius, indicatorAngle);
 
-  // Dynamic font sizes
+  // Clean font sizes
   const valueFontSize = size * 0.2;
-  const unitFontSize = size * 0.08;
+  const unitFontSize = size * 0.07;
   const labelFontSize = size * 0.08;
-  const statusFontSize = size * 0.05;
 
   const showDegreeSymbol = finalUnit === 'C' || finalUnit === '°C';
 
@@ -167,32 +159,20 @@ const DialGauge: React.FC<DialGaugeProps> = ({
     <Animated.View style={[
       styles.container, 
       { 
-        width: size + 30,
+        width: size + 20,
         transform: [{ scale: scaleAnim }]
       }
     ]}>
-      {/* Label with status indicator */}
-      <View style={styles.labelContainer}>
-        <ThemedText style={[
-          styles.label, 
-          { 
-            color: themeTextColor, 
-            fontSize: labelFontSize,
-          }
-        ]}>
-          {label}
-        </ThemedText>
-        {statusInfo.status !== 'NORMAL' && (
-          <View style={[
-            styles.statusIcon,
-            { backgroundColor: statusInfo.color + '20' }
-          ]}>
-            <ThemedText style={[styles.statusEmoji, { fontSize: labelFontSize * 0.8 }]}>
-              {statusInfo.icon}
-            </ThemedText>
-          </View>
-        )}
-      </View>
+      {/* Minimal label */}
+      <ThemedText style={[
+        styles.label, 
+        { 
+          color: themeTextColor, 
+          fontSize: labelFontSize,
+        }
+      ]}>
+        {label}
+      </ThemedText>
       
       <Animated.View style={[
         styles.gaugeContainer, 
@@ -204,35 +184,12 @@ const DialGauge: React.FC<DialGaugeProps> = ({
       ]}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <Defs>
-            {/* Progress gradient */}
-            <LinearGradient id={`progressGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            {/* Clean gradient */}
+            <LinearGradient id={`gradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
               <Stop offset="0%" stopColor={coldColor} stopOpacity="1" />
               <Stop offset="100%" stopColor={hotColor} stopOpacity="1" />
             </LinearGradient>
-            
-            {/* Danger gradient */}
-            <LinearGradient id={`dangerGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <Stop offset="0%" stopColor={dangerMarkerColor} stopOpacity="0.9" />
-              <Stop offset="100%" stopColor={criticalColor} stopOpacity="1" />
-            </LinearGradient>
-
-            {/* Success gradient */}
-            <LinearGradient id={`successGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <Stop offset="0%" stopColor={successColor} stopOpacity="0.6" />
-              <Stop offset="100%" stopColor={coldColor} stopOpacity="1" />
-            </LinearGradient>
           </Defs>
-
-          {/* Outer ring for depth */}
-          <Circle
-            cx={center}
-            cy={center}
-            r={radius + strokeWidth / 2}
-            stroke={trackBackgroundColor}
-            strokeWidth="2"
-            fill="none"
-            opacity={0.1}
-          />
 
           {/* Background track */}
           <Path
@@ -241,136 +198,95 @@ const DialGauge: React.FC<DialGaugeProps> = ({
             strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
-            opacity={0.2}
+            opacity={0.15}
           />
 
-          {/* Danger zone track */}
+          {/* Danger zone (subtle) */}
           {dangerPath && (
             <Path
               d={dangerPath}
-              stroke={`url(#dangerGradient-${label})`}
-              strokeWidth={strokeWidth * 0.6}
+              stroke={dangerMarkerColor}
+              strokeWidth={strokeWidth * 0.5}
               fill="none"
               strokeLinecap="round"
-              opacity={0.7}
+              opacity={0.4}
             />
           )}
 
-          {/* Progress track */}
+          {/* Progress arc */}
           <Path
             d={progressPath}
             stroke={
               statusInfo.status === 'CRITICAL' ? criticalColor :
               statusInfo.status === 'WARNING' ? dangerMarkerColor :
-              `url(#progressGradient-${label})`
+              `url(#gradient-${label})`
             }
             strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
-            opacity={statusInfo.status !== 'NORMAL' ? 0.95 : 0.8}
+            opacity={0.9}
           />
 
-          {/* Center highlight circle */}
-          <Circle
-            cx={center}
-            cy={center}
-            r={radius * 0.25}
-            fill={innerCircleFillColor}
-            stroke={statusInfo.color}
-            strokeWidth="2"
-            opacity={0.1}
-          />
-
-          {/* Value indicator dot */}
+          {/* Simple indicator dot */}
           <Circle
             cx={indicatorPos.x}
             cy={indicatorPos.y}
-            r={size * 0.04}
+            r={size * 0.025}
             fill={statusInfo.color}
-            stroke={innerCircleFillColor}
-            strokeWidth="3"
+            opacity={0.8}
           />
-
-          {/* Additional indicator ring for emphasis */}
-          {statusInfo.status !== 'NORMAL' && (
-            <Circle
-              cx={indicatorPos.x}
-              cy={indicatorPos.y}
-              r={size * 0.06}
-              fill="none"
-              stroke={statusInfo.color}
-              strokeWidth="2"
-              opacity={0.3}
-            />
-          )}
         </Svg>
 
         {/* Center content */}
         <View style={styles.centerContent}>
-          <View style={styles.valueContainer}>
-            <ThemedText style={[
-              styles.valueText, 
-              { 
+          <ThemedText style={[
+            styles.valueText, 
+            { 
+              color: statusInfo.color, 
+              fontSize: valueFontSize,
+              fontWeight: '300'
+            }
+          ]}>
+            {Math.round(value)}
+            {showDegreeSymbol && (
+              <ThemedText style={[styles.degreeSymbol, { 
                 color: statusInfo.color, 
-                fontSize: valueFontSize,
-                fontWeight: statusInfo.status !== 'NORMAL' ? '800' : '300'
-              }
-            ]}>
-              {Math.round(value)}
-              {showDegreeSymbol && (
-                <ThemedText style={[styles.degreeSymbol, { 
-                  color: statusInfo.color, 
-                  fontSize: valueFontSize * 0.4 
-                }]}>
-                  °
-                </ThemedText>
-              )}
-            </ThemedText>
-            
-            {finalUnit && (
-              <ThemedText style={[
-                styles.unitText, 
-                { 
-                  color: themeTextColor, 
-                  fontSize: unitFontSize,
-                  opacity: 0.7
-                }
-              ]}>
-                {finalUnit}
+                fontSize: valueFontSize * 0.4 
+              }]}>
+                °
               </ThemedText>
             )}
-          </View>
+          </ThemedText>
+          
+          {finalUnit && (
+            <ThemedText style={[
+              styles.unitText, 
+              { 
+                color: themeTextColor, 
+                fontSize: unitFontSize,
+                opacity: 0.6
+              }
+            ]}>
+              {finalUnit}
+            </ThemedText>
+          )}
         </View>
       </Animated.View>
 
-      {/* Status badge */}
+      {/* Minimal status indicator */}
       {statusInfo.status !== 'NORMAL' && (
         <View style={[
-          styles.statusBadge, 
-          { 
-            backgroundColor: statusInfo.color + '15',
-            borderColor: statusInfo.color,
-          }
-        ]}>
-          <ThemedText style={[
-            styles.statusText, 
-            { 
-              color: statusInfo.color,
-              fontSize: statusFontSize,
-              fontWeight: '700'
-            }
-          ]}>
-            {statusInfo.status}
-          </ThemedText>
-        </View>
+          styles.statusDot, 
+          { backgroundColor: statusInfo.color }
+        ]} />
       )}
 
-      {/* Range indicators */}
+      {/* Clean range display */}
       <View style={styles.rangeContainer}>
-        <ThemedText style={[styles.rangeText, { color: themeTextColor, opacity: 0.5 }]}>
+        <ThemedText style={[styles.rangeText, { color: themeTextColor }]}>
           {Math.round(finalMin)}
         </ThemedText>
-        <ThemedText style={[styles.rangeText, { color: themeTextColor, opacity: 0.5 }]}>
+        <ThemedText style={[styles.rangeText, { color: themeTextColor }]}>
           {Math.round(finalMax)}
         </ThemedText>
       </View>
@@ -382,27 +298,12 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: Layout.spacing.sm,
-    paddingHorizontal: Layout.spacing.xs,
-  },
-  labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Layout.spacing.xs,
-    gap: Layout.spacing.xs,
   },
   label: {
-    fontFamily: 'Montserrat-SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat-Medium',
     textAlign: 'center',
-  },
-  statusIcon: {
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  statusEmoji: {
-    textAlign: 'center',
+    marginBottom: Layout.spacing.sm,
+    opacity: 0.8,
   },
   gaugeContainer: {
     alignItems: 'center',
@@ -414,13 +315,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  valueContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   valueText: {
     fontFamily: 'Montserrat-Light',
-    position: 'relative',
     textAlign: 'center',
   },
   degreeSymbol: {
@@ -429,31 +325,26 @@ const styles = StyleSheet.create({
     top: -8,
   },
   unitText: {
-    fontFamily: 'Montserrat-Medium',
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'center',
-    marginTop: -5,
+    marginTop: -4,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    borderWidth: 1.5,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginTop: Layout.spacing.xs,
-  },
-  statusText: {
-    fontFamily: 'Montserrat-SemiBold',
-    textAlign: 'center',
-    letterSpacing: 0.5,
   },
   rangeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '85%',
+    width: '75%',
     marginTop: Layout.spacing.xs,
   },
   rangeText: {
     fontFamily: 'Montserrat-Regular',
-    fontSize: 9,
+    fontSize: 10,
+    opacity: 0.5,
   },
 });
 

@@ -1,6 +1,6 @@
 // labwatch-app/app/(tabs)/rooms/_layout.tsx
 import { getCommonHeaderOptions } from '@/constants/NavigationOptions';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks';
 import { Stack } from 'expo-router';
 import React from 'react';
 

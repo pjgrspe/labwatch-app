@@ -1,7 +1,6 @@
 // app/(tabs)/_layout.tsx
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors, Layout } from '@/constants';
+import { useColorScheme } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
@@ -9,7 +8,7 @@ import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
 
   const tabScreenOptions: BottomTabNavigationOptions = {
     tabBarActiveTintColor: Colors[colorScheme].tint,
@@ -26,7 +25,6 @@ export default function TabLayout() {
       fontWeight: Layout.fontWeight.medium as any,
       fontFamily: 'Montserrat-Medium',
       marginBottom: Platform.OS === 'ios' ? 0 : Layout.spacing.xs,
-
     },
     headerStyle: {
       backgroundColor: Colors[colorScheme].headerBackground,
@@ -58,19 +56,30 @@ export default function TabLayout() {
         name="rooms"
         options={{
           title: 'Rooms',
-          headerShown: false,
+          headerShown: false, // rooms stack has its own header
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="alerts"
+        name="alerts" // Assuming alerts also has its own stack navigator for header if needed
         options={{
           title: 'Alerts',
-          headerShown: false,
+          headerShown: false, // alerts stack has its own header
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* New Incidents Tab */}
+      <Tabs.Screen
+        name="incidents" // This will point to app/(tabs)/incidents/_layout.tsx
+        options={{
+          title: 'Incidents',
+          headerShown: false, // incidents stack will manage its own header
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="archive-outline" size={size} color={color} />
           ),
         }}
       />
@@ -78,7 +87,7 @@ export default function TabLayout() {
         name="more"
         options={{
           title: 'More',
-          headerShown: false,
+          headerShown: false, // more stack has its own header
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="menu-outline" size={size} color={color} />
           ),

@@ -4,19 +4,20 @@ import { Dimensions } from 'react-native';
 const width = Dimensions.get('window').width;
 const height = Dimensions.get('window').height;
 
-export default {
+const Layout = {
   window: {
     width,
     height,
   },
   isSmallDevice: width < 375,
   spacing: {
-    xs: 4,
+    xxs: 2,
+    xs: 4, // Reduced for tighter spacing
     sm: 8,
-    md: 16,
-    lg: 24, // Slightly increased for more generous spacing
-    xl: 32,
-    xxl: 40, // New larger spacing
+    md: 12,
+    lg: 16, // Slightly increased for more generous spacing
+    xl: 24,
+    xxl: 32, // New larger spacing
   },
   borderRadius: {
     sm: 6,  // Softer rounding
@@ -47,11 +48,13 @@ export default {
     shadowRadius: 12,    // More diffused
     elevation: 5,
   },
-  darkCardShadow: { // Subtle shadow for dark theme cards
-    shadowColor: '#000000', // Shadow color can remain black for dark themes too
+  darkCardShadow: { // Subtle shadow for dark theme cards    shadowColor: '#000000', // Shadow color can remain black for dark themes too
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2, // Dark mode shadows often need to be slightly more opaque to be visible on dark bgs
     shadowRadius: 8,
     elevation: 5, // Elevation can be similar or slightly less
   }
 };
+
+export { Layout };
+export default Layout;

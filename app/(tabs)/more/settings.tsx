@@ -1,8 +1,6 @@
 // app/(tabs)/more/settings.tsx
-import Card from '@/components/Card';
-import ListItem from '@/components/ListItem';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed'; // Corrected import for ThemedText
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ListItem, ThemedText, ThemedView } from '@/components';
+import { useThemeColor } from '@/hooks';
 import { ThemePreference, useAppearanceSettings } from '@/modules/settings/hooks/useAppearanceSettings';
 import { useNotificationSettings } from '@/modules/settings/hooks/useNotificationSettings';
 import React from 'react';

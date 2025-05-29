@@ -1,8 +1,8 @@
 // labwatch-app/components/ui/HeatmapGrid.tsx
 // labwatch-app/components/ui/HeatmapGrid.tsx
-import { Text as ThemedText } from '@/components/Themed'; // Assuming Themed.tsx is in components
-import Layout from '@/constants/Layout'; // Assuming Layout constants exist
-import { useThemeColor } from '@/hooks/useThemeColor'; // Assuming this hook exists
+import { ThemedText } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 

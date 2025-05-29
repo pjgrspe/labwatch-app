@@ -1,7 +1,7 @@
 // app/(tabs)/rooms/index.tsx
-import { View as ThemedView } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { ThemedView } from '@/components';
+import { Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import RoomList from '@/modules/rooms/components/RoomList';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';

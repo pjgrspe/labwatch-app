@@ -1,9 +1,7 @@
 // labwatch-app/app/assistant.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { Colors, Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { useChat } from '@/modules/assistant/hooks/useChat';
 import { Message } from '@/types/assistant';
 import { Ionicons } from '@expo/vector-icons';
@@ -289,7 +287,7 @@ export default function AssistantScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0} // Add offset for iOS tab bar
       >
         {error && (
           <Card style={styles.errorCard} paddingSize="md">
@@ -314,6 +312,7 @@ export default function AssistantScreen() {
           contentContainerStyle={styles.messageListContent}
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // Add this for better interaction
         />
         
         <ThemedView style={[
@@ -340,6 +339,8 @@ export default function AssistantScreen() {
               placeholderTextColor={placeholderTextColor}
               multiline
               maxLength={1000}
+              returnKeyType="send" // Add return key behavior
+              onSubmitEditing={handleSend} // Allow sending with return key
             />
             <TouchableOpacity 
               onPress={handleSend} 
@@ -514,7 +515,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     paddingHorizontal: Layout.spacing.md,
-    paddingVertical: Layout.spacing.sm,
+    paddingTop: Layout.spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? Layout.spacing.xl : Layout.spacing.lg, // Increased bottom padding
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputRow: {
@@ -529,8 +531,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Layout.borderRadius.lg,
     paddingHorizontal: Layout.spacing.md,
-    paddingTop: Layout.spacing.sm,
-    paddingBottom: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.sm, // Consistent vertical padding
     marginRight: Layout.spacing.sm,
     fontSize: Layout.fontSize.md,
     textAlignVertical: 'top',
@@ -541,6 +542,5 @@ const styles = StyleSheet.create({
     borderRadius: Layout.borderRadius.pill,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
   },
 });

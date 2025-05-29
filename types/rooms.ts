@@ -10,6 +10,7 @@ export interface RoomSensorData {
 }
 
 export interface Room {
+  [x: string]: any;
   id: string; // Firestore document ID
   name: string;
   location: string;
@@ -17,6 +18,8 @@ export interface Room {
   createdAt: Date;
   isArchived?: boolean; // ADDED: To mark room as archived
   archivedAt?: Date; // ADDED: Timestamp for when the room was archived
+  esp32ModuleId?: string; // ADDED: ESP32 module ID
+  esp32ModuleName?: string; // ADDED: ESP32 module name
   // You might want to add createdBy (userId) if needed
 }
 

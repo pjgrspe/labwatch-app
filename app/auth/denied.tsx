@@ -1,12 +1,12 @@
 // labwatch-app/app/auth/denied.tsx
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { ThemedText, ThemedView } from '@/components';
 import { auth } from '@/FirebaseConfig';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks';
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import React from 'react';
 import { Button, StyleSheet, View } // Added View for Button container
-    from 'react-native';
+  from 'react-native';
 
 export default function DeniedScreen() {
   const router = useRouter();

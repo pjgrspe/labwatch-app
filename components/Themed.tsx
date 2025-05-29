@@ -1,6 +1,6 @@
 // labwatch-app/components/Themed.tsx
-import { ColorName } from '@/constants/Colors';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ColorName } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import React from 'react';
 import { Text as DefaultText, View as DefaultView } from 'react-native';
 
