@@ -1,9 +1,9 @@
-// app/more/protocols.tsx
+// app/(tabs)/more/protocols/index.tsx
 import Card from '@/components/Card';
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router'; // Import Stack
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -14,17 +14,15 @@ const dummyProtocols = [
   { id: 'first-aid', name: 'Basic First Aid', summary: 'Initial response to common lab injuries.', icon: 'medkit-outline' as keyof typeof Ionicons.glyphMap },
 ];
 
-export default function ProtocolsScreen() {
+export default function ProtocolsListScreen() { // Renamed component
   const router = useRouter();
-
   const containerBackgroundColor = useThemeColor({}, 'background');
   const protocolNameColor = useThemeColor({}, 'text');
   const protocolSummaryColor = useThemeColor({}, 'icon');
   const protocolIconColor = useThemeColor({}, 'tint');
 
-
   const renderProtocolItem = ({ item }: { item: typeof dummyProtocols[0] }) => (
-     <TouchableOpacity onPress={() => router.push(`/protocol-details/${item.id}`)}>
+     <TouchableOpacity onPress={() => router.push(`/(tabs)/more/protocols/${item.id}` as any)}>
       <Card style={styles.protocolCard}>
         <ThemedView style={styles.protocolHeader}>
            <Ionicons name={item.icon} size={24} color={protocolIconColor} style={styles.protocolIcon}/>
@@ -36,14 +34,17 @@ export default function ProtocolsScreen() {
   );
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
-      <FlatList
-        data={dummyProtocols}
-        renderItem={renderProtocolItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-      />
-    </ThemedView>
+    <>
+      <Stack.Screen options={{ title: 'Emergency Protocols' }} />
+      <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
+        <FlatList
+          data={dummyProtocols}
+          renderItem={renderProtocolItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
+      </ThemedView>
+    </>
   );
 }
 
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    backgroundColor: 'transparent', 
+    backgroundColor: 'transparent',
   },
   protocolIcon: {
     marginRight: 10,

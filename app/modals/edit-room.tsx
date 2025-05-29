@@ -1,28 +1,22 @@
-// labwatch-app/app/modals/add-room.tsx
+// labwatch-app/app/modals/edit-room.tsx
 import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { Text as ThemedText, View as ThemedView, View } from '@/components/Themed';
 import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { RoomService } from '@/modules/rooms/services/RoomService';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Button,
-  StyleSheet,
-  Switch,
-  TextInput,
-  View
-  // requestAnimationFrame is a global, no import needed from 'react-native'
-} from 'react-native';
+import { RoomService } from '@/modules/rooms/services/RoomService'; // Adjust path
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Button, StyleSheet, Switch, TextInput } from 'react-native';
 
-export default function AddRoomModal() {
+export default function EditRoomModal() {
   const router = useRouter();
+  const { roomId } = useLocalSearchParams<{ roomId: string }>();
+
   const [roomName, setRoomName] = useState('');
   const [location, setLocation] = useState('');
   const [isMonitored, setIsMonitored] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start true to load initial data
+  const [isSaving, setIsSaving] = useState(false);
 
   const containerBackgroundColor = useThemeColor({}, 'background');
   const inputBackgroundColor = useThemeColor({light: '#FFFFFF', dark: '#2C2C2E'}, 'inputBackground');
@@ -36,57 +30,92 @@ export default function AddRoomModal() {
   const switchThumbColorDisabled = useThemeColor({}, 'icon');
   const switchTrackColorTrue = useThemeColor({ light: "#81b0ff", dark: "#585858" }, 'tint');
   const switchTrackColorFalse = useThemeColor({ light: "#767577", dark: "#3e3e3e" }, 'icon');
+  const errorTextColor = useThemeColor({}, 'errorText');
 
 
-  const handleAddRoom = async () => {
+  useEffect(() => {
+    if (roomId) {
+      const fetchRoomData = async () => {
+        setIsLoading(true);
+        try {
+          const roomData = await RoomService.getRoomById(roomId);
+          if (roomData) {
+            setRoomName(roomData.name);
+            setLocation(roomData.location);
+            setIsMonitored(roomData.isMonitored);
+          } else {
+            Alert.alert("Error", "Room not found.");
+            router.back();
+          }
+        } catch (error) {
+          console.error("Error fetching room data:", error);
+          Alert.alert("Error", "Failed to load room details.");
+          router.back();
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchRoomData();
+    } else {
+        Alert.alert("Error", "No Room ID provided.");
+        router.back();
+        setIsLoading(false);
+    }
+  }, [roomId, router]);
+
+  const handleUpdateRoom = async () => {
+    if (!roomId) {
+      Alert.alert("Error", "Room ID is missing.");
+      return;
+    }
     if (!roomName.trim() || !location.trim()) {
       Alert.alert("Missing Information", "Please fill out both room name and location.");
       return;
     }
-    setIsLoading(true);
+    setIsSaving(true);
     try {
-      await RoomService.addRoom({ name: roomName, location, isMonitored }); //
-      Alert.alert(
-        "Room Added",
-        `Room "${roomName}" has been successfully added.`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setIsLoading(false);
-              // Use global requestAnimationFrame
-              global.requestAnimationFrame(() => { // Or simply requestAnimationFrame(() => { ... });
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)/rooms');
-                }
-              });
-            }
-          }
-        ]
-      );
+      await RoomService.updateRoom(roomId, { name: roomName, location, isMonitored });
+      Alert.alert("Room Updated", `Room "${roomName}" has been successfully updated.`);
+      router.back();
     } catch (error) {
-      console.error("Error adding room:", error);
-      Alert.alert("Error", "Failed to add room. Please try again.");
-      setIsLoading(false);
+      console.error("Error updating room:", error);
+      Alert.alert("Error", "Failed to update room. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <ThemedView style={[styles.container, styles.centered, { backgroundColor: containerBackgroundColor }]}>
+        <ActivityIndicator size="large" color={buttonBackgroundColor} />
+        <ThemedText style={{marginTop: 10, color: titleColor}}>Loading Room Details...</ThemedText>
+      </ThemedView>
+    );
+  }
+   if (!roomId) { // Should be caught by useEffect, but as a fallback
+    return (
+      <ThemedView style={[styles.container, styles.centered, { backgroundColor: containerBackgroundColor }]}>
+        <ThemedText style={{ color: errorTextColor }}>Error: Room ID missing.</ThemedText>
+      </ThemedView>
+    );
+  }
+
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
       <Card style={styles.card}>
-        <ThemedText style={[styles.title, { color: titleColor }]}>Add New Room</ThemedText>
+        <ThemedText style={[styles.title, { color: titleColor }]}>Edit Room</ThemedText>
         <TextInput
           style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
-          placeholder="Room Name (e.g., Lab Alpha)"
+          placeholder="Room Name"
           value={roomName}
           onChangeText={setRoomName}
           placeholderTextColor={placeholderTextColor}
         />
         <TextInput
           style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
-          placeholder="Location (e.g., Building A, Floor 1)"
+          placeholder="Location"
           value={location}
           onChangeText={setLocation}
           placeholderTextColor={placeholderTextColor}
@@ -102,12 +131,12 @@ export default function AddRoomModal() {
           />
         </View>
 
-        {isLoading ? (
+        {isSaving ? (
           <ActivityIndicator size="large" color={buttonBackgroundColor} style={{marginTop: Layout.spacing.md}}/>
         ) : (
-          <View style={styles.buttonWrapper}>
-            <Button title="Add Room" onPress={handleAddRoom} color={buttonBackgroundColor} />
-          </View>
+         <ThemedView style={styles.buttonWrapper}>
+            <Button title="Save Changes" onPress={handleUpdateRoom} color={buttonBackgroundColor} />
+         </ThemedView>
         )}
       </Card>
     </ThemedView>
@@ -119,6 +148,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: Layout.spacing.lg,
+  },
+  centered: {
+      justifyContent: 'center',
+      alignItems: 'center',
   },
   card: {
     padding: Layout.spacing.lg,
@@ -144,16 +177,14 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.lg,
     marginTop: Layout.spacing.xs,
     paddingHorizontal: Layout.spacing.xs,
-    backgroundColor: 'transparent',
   },
   label: {
     fontSize: Layout.fontSize.md,
     marginRight: Layout.spacing.md,
   },
-  buttonWrapper: {
+   buttonWrapper: {
       marginTop: Layout.spacing.sm,
       borderRadius: Layout.borderRadius.sm,
       overflow: 'hidden',
-      backgroundColor: 'transparent',
   }
 });

@@ -1,8 +1,8 @@
-// app/more/incidents.tsx
+// app/(tabs)/more/incidents/index.tsx
 import Card from '@/components/Card';
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router'; // Import Stack
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -12,16 +12,15 @@ const dummyIncidents = [
   { id: 'inc2024003', type: 'Power Outage Response', date: '2024-01-15', reportedBy: 'Safety Team', status: 'Documented' },
 ];
 
-export default function IncidentsScreen() {
+export default function IncidentsListScreen() { // Renamed component
   const router = useRouter();
   const containerBackgroundColor = useThemeColor({}, 'background');
   const incidentTypeColor = useThemeColor({}, 'text');
-  const incidentInfoColor = useThemeColor({}, 'icon'); // For less prominent info
+  const incidentInfoColor = useThemeColor({}, 'icon');
   const incidentStatusColor = useThemeColor({}, 'icon');
 
-
   const renderIncidentItem = ({ item }: { item: typeof dummyIncidents[0] }) => (
-    <TouchableOpacity onPress={() => router.push(`/incident-details/${item.id}`)}>
+    <TouchableOpacity onPress={() => router.push(`/(tabs)/more/incidents/${item.id}` as any)}>
       <Card style={styles.incidentCard}>
         <ThemedText style={[styles.incidentType, { color: incidentTypeColor }]}>{item.type}</ThemedText>
         <ThemedText style={[styles.incidentInfo, { color: incidentInfoColor }]}>Date: {item.date} | Reported by: {item.reportedBy}</ThemedText>
@@ -31,14 +30,17 @@ export default function IncidentsScreen() {
   );
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
-      <FlatList
-        data={dummyIncidents}
-        renderItem={renderIncidentItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-      />
-    </ThemedView>
+    <>
+      <Stack.Screen options={{ title: 'Incident History' }} />
+      <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
+        <FlatList
+          data={dummyIncidents}
+          renderItem={renderIncidentItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
+      </ThemedView>
+    </>
   );
 }
 
@@ -50,7 +52,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   incidentCard: {
-    marginBottom: 12, 
+    marginBottom: 12,
   },
   incidentType: {
     fontSize: 17,
