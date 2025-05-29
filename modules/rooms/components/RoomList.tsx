@@ -1,88 +1,190 @@
-// modules/rooms/components/RoomList.tsx
+// labwatch-app/modules/rooms/components/RoomList.tsx
 import Card from '@/components/Card';
-import ListItem from '@/components/ListItem';
 import { Text as ThemedText } from '@/components/Themed';
+import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import React, { useState } from 'react';
-import { FlatList, StyleSheet } from 'react-native';
-
-interface Room {
-  id: string;
-  name: string;
-  location: string;
-  isMonitored: boolean;
-}
-
-const DUMMY_ROOMS: Room[] = [
-  { id: 'room1', name: 'Lab Alpha', location: 'Building A, Floor 1', isMonitored: true },
-  { id: 'room2', name: 'Cold Storage 003', location: 'Building A, Basement', isMonitored: false },
-  { id: 'room3', name: 'Microscopy Suite', location: 'Building B, Floor 2', isMonitored: true },
-  { id: 'room4', name: 'Chem Prep Room', location: 'Building A, Floor 1', isMonitored: false },
-];
+import { Room } from '@/types/rooms'; // Adjust path as needed
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { RoomService } from '../services/RoomService'; // Adjust path as needed
 
 export default function RoomList() {
-  const [rooms, setRooms] = useState<Room[]>(DUMMY_ROOMS);
+  const router = useRouter();
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const sectionTitleColor = useThemeColor({ light: '#4A4A4A', dark: '#CCCCCC' }, 'text');
-  const switchThumbColorEnabled = useThemeColor({ light: "#f5dd4b", dark: "#f5dd4b" }, 'tint');
-  const switchThumbColorDisabled = useThemeColor({ light: "#f4f3f4", dark: "#767577" }, 'icon');
-  const switchTrackColorTrue = useThemeColor({ light: "#81b0ff", dark: "#585858" }, 'tint');
-  const switchTrackColorFalse = useThemeColor({ light: "#767577", dark: "#3e3e3e" }, 'icon');
-  const switchIosBackgroundColor = useThemeColor({ light: "#3e3e3e", dark: "#1c1c1e" }, 'background');
+  const errorTextColor = useThemeColor({}, 'errorText');
+  const tintColor = useThemeColor({}, 'tint');
+  const subtleTextColor = useThemeColor({}, 'icon'); // For less prominent text like subtitles or status tags
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const monitoredColor = useThemeColor({}, 'successText'); // Green for monitored
+  const notMonitoredColor = useThemeColor({}, 'icon'); // Grey for not monitored, or a subtle warning
+  const emptyStateIconColor = useThemeColor({}, 'icon');
 
 
-  const toggleMonitorSwitch = (roomId: string) => {
-    setRooms(prevRooms =>
-      prevRooms.map(room =>
-        room.id === roomId ? { ...room, isMonitored: !room.isMonitored } : room
-      )
+  useEffect(() => {
+    setIsLoading(true);
+    const unsubscribe = RoomService.onRoomsUpdate(
+      (updatedRooms) => {
+        setRooms(updatedRooms);
+        setIsLoading(false);
+        setError(null);
+      },
+      (fetchError: Error) => {
+        console.error("Failed to fetch rooms:", fetchError);
+        setError("Failed to load rooms. Please try again.");
+        setIsLoading(false);
+      }
     );
-    // Here you would typically also make an API call to update the monitoring status
-    // console.log(`Room ${roomId} monitoring toggled to ${!rooms.find(r => r.id === roomId)?.isMonitored}`);
-  };
+    return () => unsubscribe();
+  }, []);
 
   const renderItem = ({ item }: { item: Room }) => (
-    <Card style={styles.roomCard}>
-      <ListItem
-        title={item.name}
-        subtitle={item.location}
-        rightIconName={item.isMonitored ? "eye-outline" : "eye-off-outline"}
-        showBorder={false} // Card already provides separation
-      />
-    </Card>
+    <TouchableOpacity onPress={() => router.push(`/(tabs)/rooms/${item.id}` as any)}>
+      <Card style={[styles.roomItemCard, {backgroundColor: cardBackgroundColor}]}>
+        {/* Modified ListItem content */}
+        <View style={styles.listItemContent}>
+          <View style={styles.roomInfo}>
+            <ThemedText style={[styles.roomName, { color: sectionTitleColor }]}>{item.name}</ThemedText>
+            <ThemedText style={[styles.roomLocation, { color: subtleTextColor }]}>{item.location}</ThemedText>
+          </View>
+          <View style={styles.statusIndicatorContainer}>
+            <View style={[
+              styles.statusDot,
+              { backgroundColor: item.isMonitored ? monitoredColor : notMonitoredColor }
+            ]} />
+            <ThemedText style={[
+              styles.statusText,
+              { color: item.isMonitored ? monitoredColor : notMonitoredColor }
+            ]}>
+              {item.isMonitored ? "Monitored" : "Not Monitored"}
+            </ThemedText>
+          </View>
+        </View>
+      </Card>
+    </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={tintColor} />
+        <ThemedText style={{ marginTop: Layout.spacing.sm, color: sectionTitleColor }}>Loading rooms...</ThemedText>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <ThemedText style={{ color: errorTextColor }}>{error}</ThemedText>
+      </View>
+    );
+  }
+
   return (
-    <>
-      <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>Select Rooms to Monitor</ThemedText>
+    <View style={{flex: 1}}>
+      <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+        {/* This title can be removed if the header in app/(tabs)/rooms/index.tsx is sufficient */}
+        {/* Or, adapt its visibility based on whether rooms exist */}
+        {rooms.length > 0 ? "All Rooms" : ""}
+      </ThemedText>
+      {rooms.length === 0 && !isLoading && (
+        <View style={styles.emptyStateContainer}>
+            <Ionicons name="cube-outline" size={80} color={emptyStateIconColor} />
+            <ThemedText style={[styles.emptyStateTitle, {color: sectionTitleColor}]}>No Rooms Yet</ThemedText>
+            <ThemedText style={[styles.emptyStateSubtitle, {color: subtleTextColor}]}>
+                Press the "+" button below to add your first lab room and start monitoring.
+            </ThemedText>
+        </View>
+      )}
       <FlatList
         data={rooms}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        scrollEnabled={false} // If this list is inside another ScrollView
+        showsVerticalScrollIndicator={false}
       />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: Layout.spacing.md,
+    paddingBottom: Layout.spacing.xxl + Layout.spacing.lg, // Increased padding for FAB
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginVertical: 12,
-    paddingHorizontal: 16,
+  roomItemCard: {
+    marginBottom: Layout.spacing.md,
+    paddingVertical: Layout.spacing.md, // Adjusted padding
+    paddingHorizontal: Layout.spacing.lg, // Adjusted padding
   },
-  roomCard: {
-    marginBottom: 12,
+  listItemContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: 'transparent', // Ensure card background shows
   },
-  switch: {
-    marginLeft: 10, // Add some spacing if ListItem doesn't handle it
-  }
+  roomInfo: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  roomName: {
+    fontSize: Layout.fontSize.lg, // Slightly larger
+    fontWeight: Layout.fontWeight.semibold, // More emphasis
+  },
+  roomLocation: {
+    fontSize: Layout.fontSize.sm,
+    marginTop: Layout.spacing.xs,
+  },
+  statusIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingLeft: Layout.spacing.md, // Space from room info
+  },
+  statusDot: {
+    width: 10, // Larger dot
+    height: 10,
+    borderRadius: 5,
+    marginRight: Layout.spacing.sm,
+  },
+  statusText: {
+    fontSize: Layout.fontSize.xs,
+    fontWeight: Layout.fontWeight.medium,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Layout.spacing.lg,
+  },
+  emptyStateContainer: { // Enhanced empty state
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingBottom: Layout.spacing.xxl, // Space for FAB
+  },
+  emptyStateTitle: {
+      fontSize: Layout.fontSize.xl,
+      fontWeight: Layout.fontWeight.bold,
+      marginTop: Layout.spacing.lg,
+      marginBottom: Layout.spacing.sm,
+  },
+  emptyStateSubtitle: {
+      fontSize: Layout.fontSize.md,
+      textAlign: 'center',
+      lineHeight: Layout.fontSize.md * 1.5,
+  },
+  sectionTitle: {
+    fontSize: Layout.fontSize.xl, // Keep it if you want a title within this component
+    fontWeight: Layout.fontWeight.semibold,
+    marginVertical: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.md,
+  },
 });

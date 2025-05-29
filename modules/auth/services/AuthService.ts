@@ -1,11 +1,10 @@
 // labwatch-app/modules/auth/services/AuthService.ts
-import { app, auth } from '@/FirebaseConfig';
+import { app, auth, db } from '@/FirebaseConfig';
 import {
   User as FirebaseUser, // Import this if you plan to allow users to delete their OWN account from client
   onAuthStateChanged
 } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, getFirestore, query, updateDoc, where } from 'firebase/firestore'; // Removed collection for now as it's unused here
-import { Alert } from 'react-native';
+import { collection, doc, getDoc, getDocs, getFirestore, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'; // Removed collection for now as it's unused here
 
 const firestore = getFirestore(app);
 
@@ -34,78 +33,127 @@ export const AuthService = {
     });
   },
 
-  getUserProfile: async (uid: string): Promise<UserProfile | null> => {
-    try {
-      const userDocRef = doc(firestore, "users", uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        return userDocSnap.data() as UserProfile;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      return null;
-    }
-  },
-
-  isSuperAdmin: async (uid: string | undefined): Promise<boolean> => {
-    if (!uid) return false;
-    if (uid === SUPERADMIN_UID) return true;
-
-    const userProfile = await AuthService.getUserProfile(uid);
-    return userProfile?.role === 'superadmin';
-  },
-
+  // SIMPLIFIED: Get pending users with better error handling
   getPendingUsers: async (): Promise<UserProfile[]> => {
     try {
-      const usersRef = collection(firestore, "users"); // Ensure collection is imported from firebase/firestore
-      const q = query(usersRef, where("status", "==", "pending"));
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('status', '==', 'pending'));
       const querySnapshot = await getDocs(q);
+      
       const pendingUsers: UserProfile[] = [];
       querySnapshot.forEach((doc) => {
-        pendingUsers.push(doc.data() as UserProfile);
+        const userData = doc.data();
+        pendingUsers.push({
+          uid: doc.id,
+          email: userData.email || '',
+          fullName: userData.fullName || '',
+          role: userData.role || 'user',
+          status: userData.status || 'pending',
+          createdAt: userData.createdAt || new Date(),
+          approvedAt: userData.approvedAt,
+          deniedAt: userData.deniedAt,
+        });
       });
+      
       return pendingUsers;
     } catch (error) {
-      console.error("Error fetching pending users:", error);
-      // It's better to throw the error or return a result indicating failure
-      // For now, returning empty array and logging is kept from original.
-      return [];
-    }
-  },
-
-  approveUser: async (uid: string): Promise<void> => {
-    try {
-      const userDocRef = doc(firestore, "users", uid);
-      await updateDoc(userDocRef, {
-        status: "approved",
-        approvedAt: new Date(),
-      });
-    } catch (error) {
-      console.error("Error approving user:", error);
+      console.error('Error fetching pending users:', error);
       throw error;
     }
   },
 
-  // Renamed from deleteUserAccountCompletely to reflect new behavior
-  denyUserRegistration: async (uid: string): Promise<void> => {
-    console.warn(
-      `Marking user ${uid} as 'denied' in Firestore. For the user to re-signup with the same email, their Firebase Auth account must be deleted. This typically requires a backend Firebase Function with admin privileges.`
-    );
+  // SIMPLIFIED: Get user profile with better error handling
+  getUserProfile: async (uid: string): Promise<UserProfile | null> => {
     try {
-        // Step 1: Update Firestore document status to "denied"
-        const userDocRef = doc(firestore, "users", uid);
-        await updateDoc(userDocRef, {
-            status: "denied",
-            deniedAt: new Date(),
-        });
-        console.log(`User ${uid} status updated to "denied" in Firestore.`);
-        Alert.alert("User Denied", `User account for UID ${uid} has been marked as denied. To allow re-signup with the same email, their Firebase Auth account needs to be deleted via a backend function.`);
-
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      
+      if (!userDoc.exists()) {
+        console.log(`No user profile found for UID: ${uid}`);
+        return null;
+      }
+      
+      const userData = userDoc.data();
+      return {
+        uid: userDoc.id,
+        email: userData.email || '',
+        fullName: userData.fullName || '',
+        role: userData.role || 'user',
+        status: userData.status || 'pending',
+        createdAt: userData.createdAt || new Date(),
+        approvedAt: userData.approvedAt,
+        deniedAt: userData.deniedAt,
+      };
     } catch (error) {
-        console.error("Error in denyUserRegistration for UID:", uid, error);
-        Alert.alert("Denial Error", `Failed to mark user ${uid} as denied. Check console.`);
-        throw error;
+      console.error('Error fetching user profile:', error);
+      return null; // Return null instead of throwing
     }
   },
+
+  // SIMPLIFIED: Check if user is superadmin
+  isSuperAdmin: async (uid: string): Promise<boolean> => {
+    try {
+      // First check hardcoded superadmin UID
+      if (uid === "HwmCopyPS4eEUgjTpmFkRjhDedO2") {
+        return true;
+      }
+      
+      // Then check user profile
+      const userProfile = await AuthService.getUserProfile(uid);
+      return userProfile?.role === 'superadmin';
+    } catch (error) {
+      console.error('Error checking superadmin status:', error);
+      return false; // Return false instead of throwing
+    }
+  },
+
+  // SIMPLIFIED: Approve user with minimal validation
+  approveUser: async (userId: string): Promise<void> => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      
+      // Simple update - let Firestore handle the rest
+      await updateDoc(userDocRef, {
+        status: 'approved',
+        approvedAt: new Date(), // Use regular Date for simplicity
+      });
+      
+      console.log(`User ${userId} approved successfully`);
+    } catch (error) {
+      console.error('Error approving user:', error);
+      throw error;
+    }
+  },
+
+  // SIMPLIFIED: Deny user with minimal validation
+  denyUser: async (userId: string): Promise<void> => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      
+      // Simple update - let Firestore handle the rest
+      await updateDoc(userDocRef, {
+        status: 'denied',
+        deniedAt: new Date(), // Use regular Date for simplicity
+      });
+      
+      console.log(`User ${userId} denied successfully`);
+    } catch (error) {
+      console.error('Error denying user:', error);
+      throw error;
+    }
+  },
+
+  deleteUser: async (uid: string): Promise<void> => {
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, {
+        status: 'deleted',
+        deletedAt: serverTimestamp(), // Use serverTimestamp for consistency
+      });
+      console.log(`User ${uid} deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  },
+
 };

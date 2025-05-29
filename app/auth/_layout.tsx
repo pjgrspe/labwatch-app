@@ -1,14 +1,20 @@
-// labwatch/app/auth/_layout.tsx
+// labwatch-app/app/auth/_layout.tsx
+// This layout can remain simple as it's just for grouping auth screens,
+// and the root layout will apply modal presentation if needed.
+// If auth screens need their own distinct header style not covered by root,
+// you'd use getCommonHeaderOptions here.
 import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function AuthLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* Explicitly list each auth screen as a child of this auth stack */}
-      <Stack.Screen name="login" options={{ title: 'Login' }} />
-      <Stack.Screen name="signup" options={{ title: 'Sign Up' }} />
-      <Stack.Screen name="denied" options={{ title: 'Access Denied' }} />
-      <Stack.Screen name="pending-approval" options={{ title: 'Pending Approval' }} />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="signup" />
+      <Stack.Screen name="denied" />
+      <Stack.Screen name="pending-approval" />
+       {/* index.tsx in auth will redirect, so no explicit options needed */}
+      <Stack.Screen name="index" />
     </Stack>
   );
 }

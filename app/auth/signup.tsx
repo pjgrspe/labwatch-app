@@ -1,10 +1,10 @@
 // app/auth/signup.tsx
 import { Text as ThemedText } from '@/components/Themed';
-import { app, auth } from '@/FirebaseConfig'; // Assuming app is exported for firestore initialization
+import { app, auth } from '@/FirebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getFirestore, setDoc } from 'firebase/firestore';
+import { doc, getFirestore, setDoc } from 'firebase/firestore'; // Added serverTimestamp
 import React, { useState } from 'react';
 import { Alert, Button, KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 
@@ -14,7 +14,8 @@ export default function SignupScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState(''); // Added for user data
+  const [fullName, setFullName] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
 
   const containerBackgroundColor = useThemeColor({}, 'background');
   const inputBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'inputBackground');
@@ -30,25 +31,33 @@ export default function SignupScreen() {
       Alert.alert("Missing Information", "Please fill out all fields.");
       return;
     }
+
+    setIsLoading(true);
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Store additional user info in Firestore
+      // SIMPLIFIED: Store user info with minimal validation
       await setDoc(doc(firestore, "users", user.uid), {
         uid: user.uid,
         email: user.email,
-        fullName: fullName,
-        role: "user", // Default role
-        status: "pending", // Initial status, to be approved by admin
-        createdAt: new Date(),
+        fullName: fullName.trim(),
+        role: "user",
+        status: "pending",
+        createdAt: new Date(), // Use regular Date for simplicity
       });
 
-      Alert.alert("Signup Successful", "Your account has been created and is awaiting admin approval.");
-      router.replace('/auth/pending-approval'); // Changed to pending-approval
+      Alert.alert(
+        "Signup Successful", 
+        "Your account has been created and is awaiting admin approval.",
+        [{ text: "OK", onPress: () => router.replace('/auth/pending-approval') }]
+      );
     } catch (error: any) {
-      Alert.alert("Signup Failed", error.message);
       console.error("Signup error:", error);
+      Alert.alert("Signup Failed", error.message || "An error occurred during signup. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -65,6 +74,7 @@ export default function SignupScreen() {
         onChangeText={setFullName}
         placeholderTextColor={placeholderTextColor}
         autoCapitalize="words"
+        editable={!isLoading}
       />
       <TextInput
         style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
@@ -74,6 +84,7 @@ export default function SignupScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         placeholderTextColor={placeholderTextColor}
+        editable={!isLoading}
       />
       <TextInput
         style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
@@ -82,11 +93,20 @@ export default function SignupScreen() {
         onChangeText={setPassword}
         secureTextEntry
         placeholderTextColor={placeholderTextColor}
+        editable={!isLoading}
       />
       <View style={styles.buttonContainer}>
-        <Button title="Sign Up" onPress={handleSignup} color={buttonBackgroundColor} />
+        <Button 
+          title={isLoading ? "Creating Account..." : "Sign Up"} 
+          onPress={handleSignup} 
+          color={buttonBackgroundColor}
+          disabled={isLoading}
+        />
       </View>
-      <ThemedText style={styles.loginText} onPress={() => router.replace('/auth/login')}>
+      <ThemedText 
+        style={styles.loginText} 
+        onPress={() => !isLoading && router.replace('/auth/login')}
+      >
         Already have an account? <ThemedText style={{ color: linkTextColor, fontWeight: 'bold' }}>Log In</ThemedText>
       </ThemedText>
     </KeyboardAvoidingView>
@@ -116,7 +136,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 10,
     borderRadius: 8,
-    overflow: 'hidden', // Ensures the button respects border radius on Android
+    overflow: 'hidden',
   },
   loginText: {
     marginTop: 20,

@@ -1,31 +1,22 @@
 // labwatch-app/app/(tabs)/more/_layout.tsx
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
+import { getCommonHeaderOptions } from '@/constants/NavigationOptions'; // Import the new function
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Stack } from 'expo-router';
 import React from 'react';
 
 export default function MoreLayout() {
   const colorScheme = useColorScheme() ?? 'light';
+  const commonOptions = getCommonHeaderOptions(colorScheme);
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: Colors[colorScheme].headerBackground,
-        },
-        headerTintColor: Colors[colorScheme].headerTint,
-        headerTitleStyle: {
-          fontWeight: Layout.fontWeight.bold,
-          fontSize: Layout.fontSize.header,
-        },
-      }}>
+    <Stack screenOptions={commonOptions}>
       <Stack.Screen name="index" options={{ title: 'More Options' }} />
-      <Stack.Screen name="protocols" options={{ title: 'Emergency Protocols' }} />
-      <Stack.Screen name="incidents" options={{ title: 'Incident History' }} />
-      <Stack.Screen name="knowledge-base" options={{ title: 'Knowledge Base' }} />
+      <Stack.Screen name="protocols" options={{ headerShown: false }} />
+      <Stack.Screen name="incidents" options={{ headerShown: false }} />
+      {/* knowledge-base screen is commented out in index, so not adding header config unless restored */}
+      {/* <Stack.Screen name="knowledge-base" options={{ title: 'Knowledge Base' }} /> */}
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-      <Stack.Screen name="admin" options={{ headerShown: false, title: "Admin Section" }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
     </Stack>
   );
 }
