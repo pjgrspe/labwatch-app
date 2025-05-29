@@ -1,19 +1,22 @@
 // app/(tabs)/rooms/index.tsx
 import { View as ThemedView } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import Layout from '@/constants/Layout'; // Import Layout
+import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor'; // Ensure useCurrentTheme is imported
 import RoomList from '@/modules/rooms/components/RoomList';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function RoomsListScreen() { 
+export default function RoomsListScreen() {
   const router = useRouter();
   const containerBackgroundColor = useThemeColor({}, 'background');
   const fabBackgroundColor = useThemeColor({}, 'tint');
-  const fabIconColor = useThemeColor({}, 'text');
-  const headerIconColor = useThemeColor({}, 'headerTint'); // For header right button
+  const fabIconColor = useThemeColor({}, 'primaryButtonText'); // Changed for better contrast on tint
+  const headerIconColor = useThemeColor({}, 'headerTint');
+  const theme = useCurrentTheme();
+  const shadowStyle = theme === 'light' ? Layout.cardShadow : Layout.darkCardShadow;
+
 
   const handleAddRoom = () => {
     router.push('/modals/add-room');
@@ -23,13 +26,13 @@ export default function RoomsListScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Rooms',
+          title: 'Lab Rooms',
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/rooms/archived')}
               style={{ marginRight: Layout.spacing.md }}
             >
-              <Ionicons name="archive-outline" size={24} color={headerIconColor} />
+              <Ionicons name="archive-outline" size={26} color={headerIconColor} />
             </TouchableOpacity>
           ),
         }}
@@ -37,11 +40,16 @@ export default function RoomsListScreen() {
       <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
         <RoomList />
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: fabBackgroundColor }]}
+          style={[
+            styles.fab,
+            { backgroundColor: fabBackgroundColor },
+            shadowStyle
+          ]}
           onPress={handleAddRoom}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-outline" size={30} color={fabIconColor} />
+          {/* Changed to solid 'add' icon for primary action */}
+          <Ionicons name="add" size={32} color={fabIconColor} />
         </TouchableOpacity>
       </ThemedView>
     </>
@@ -54,19 +62,15 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    margin: Layout.spacing.lg,
-    right: Layout.spacing.sm,
-    bottom: Layout.spacing.sm,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    margin: Layout.spacing.lg, // Consistent spacing
+    right: Layout.spacing.md,
+    bottom: Layout.spacing.md,
+    width: 60,
+    height: 60,
+    borderRadius: 30, // Fully circular
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    // Shadow properties are now applied via shadowStyle
     zIndex: 10,
   },
 });

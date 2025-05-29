@@ -46,8 +46,8 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   const radius = size / 2 - tickLength - (size * 0.05);
   const radiusOuter = radius + tickLength / 2;
   const radiusInner = radius - tickLength / 2;
-  const startAngle = 181;
-  const endAngle = 179;
+  const startAngle = 220;
+  const endAngle = 140;
   const angleRange = (endAngle < startAngle)
       ? (endAngle + 360 - startAngle)
       : (endAngle - startAngle);

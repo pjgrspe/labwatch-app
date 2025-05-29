@@ -35,6 +35,7 @@ export default function ManageUsersScreen() {
     fetchPendingUsers();
   }, []);
 
+  // SIMPLIFIED: Remove permission checks, let Firestore rules handle it
   const handleApprove = async (uid: string) => {
     Alert.alert(
       "Confirm Approval",
@@ -48,8 +49,9 @@ export default function ManageUsersScreen() {
               await AuthService.approveUser(uid);
               Alert.alert("Success", "User approved.");
               fetchPendingUsers(); // Refresh list
-            } catch (error) {
-              Alert.alert("Error", "Failed to approve user.");
+            } catch (error: any) {
+              console.error("Error approving user:", error);
+              Alert.alert("Error", `Failed to approve user: ${error.message}`);
             }
           },
         },
@@ -59,21 +61,21 @@ export default function ManageUsersScreen() {
 
   const handleDeny = async (uid: string) => {
      Alert.alert(
-      "Confirm Denial", // Changed title
-      "Are you sure you want to deny this user registration? They will be informed on next login and may need to sign up again.", // Changed message
+      "Confirm Denial",
+      "Are you sure you want to deny this user registration?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Deny Registration", // Changed button text
+          text: "Deny Registration",
           style: "destructive",
           onPress: async () => {
             try {
-              await AuthService.denyUserRegistration(uid); // Use the updated/renamed function
-              // Alert is now shown by denyUserRegistration
+              await AuthService.denyUser(uid);
+              Alert.alert("Success", "User registration denied.");
               fetchPendingUsers(); // Refresh list
-            } catch (error) {
-              // Error alert is handled by the service or here if needed
-              Alert.alert("Error", "Failed to deny user registration.");
+            } catch (error: any) {
+              console.error("Error denying user:", error);
+              Alert.alert("Error", `Failed to deny user: ${error.message}`);
             }
           },
         },
@@ -81,19 +83,57 @@ export default function ManageUsersScreen() {
     );
   };
 
+  // FIXED: Helper function to safely format date
+  const formatDate = (dateValue: any): string => {
+    try {
+      if (!dateValue) return 'N/A';
+      
+      // Handle Firestore Timestamp
+      if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+        return dateValue.toDate().toLocaleDateString();
+      }
+      
+      // Handle regular Date object or string
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
 
   const renderUserItem = ({ item }: { item: UserProfile }) => (
     <Card style={styles.userItemCard}>
-        <ThemedText style={[styles.userName, {color: textColor}]}>{item.fullName || 'N/A'}</ThemedText>
-        <ThemedText style={[styles.userEmail, {color: textColor}]}>{item.email}</ThemedText>
-        <ThemedText style={[styles.userStatus, {color: textColor}]}>Status: {item.status}</ThemedText>
-        <ThemedText style={[styles.userDate, {color: textColor}]}>Registered: {new Date(item.createdAt).toLocaleDateString()}</ThemedText>
+        <ThemedText style={[styles.userName, {color: textColor}]}>
+          {item.fullName || 'N/A'}
+        </ThemedText>
+        <ThemedText style={[styles.userEmail, {color: textColor}]}>
+          {item.email || 'N/A'}
+        </ThemedText>
+        <ThemedText style={[styles.userStatus, {color: textColor}]}>
+          Status: {item.status || 'Unknown'}
+        </ThemedText>
+        <ThemedText style={[styles.userDate, {color: textColor}]}>
+          Registered: {formatDate(item.createdAt)}
+        </ThemedText>
         <View style={styles.actionsContainer}>
             <View style={styles.buttonWrapper}>
-                <Button title="Approve" onPress={() => handleApprove(item.uid)} color={approveButtonColor} />
+                <Button 
+                  title="Approve" 
+                  onPress={() => handleApprove(item.uid)} 
+                  color={approveButtonColor} 
+                />
             </View>
             <View style={styles.buttonWrapper}>
-                 <Button title="Deny" onPress={() => handleDeny(item.uid)} color={denyButtonColor} /> {/* Changed button title */}
+                 <Button 
+                   title="Deny" 
+                   onPress={() => handleDeny(item.uid)} 
+                   color={denyButtonColor} 
+                 />
             </View>
         </View>
     </Card>
@@ -103,7 +143,9 @@ export default function ManageUsersScreen() {
     return (
       <View style={[styles.centered, { backgroundColor: containerBackgroundColor }]}>
         <ActivityIndicator size="large" color={activityIndicatorColor} />
-        <ThemedText style={{ color: textColor, marginTop: 10 }}>Loading pending users...</ThemedText>
+        <ThemedText style={{ color: textColor, marginTop: 10 }}>
+          Loading pending users...
+        </ThemedText>
       </View>
     );
   }
@@ -112,7 +154,9 @@ export default function ManageUsersScreen() {
     <View style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
       {pendingUsers.length === 0 && !isLoading ? (
         <View style={styles.centered}>
-            <ThemedText style={{color: textColor, fontSize: 16}}>No pending user signups.</ThemedText>
+            <ThemedText style={{color: textColor, fontSize: 16}}>
+              No pending user signups.
+            </ThemedText>
         </View>
       ) : (
         <FlatList
@@ -150,7 +194,6 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 14,
-    // color: '#555', // Handled by theme
     marginVertical: 2,
   },
   userStatus: {
@@ -160,7 +203,6 @@ const styles = StyleSheet.create({
   },
   userDate: {
     fontSize: 12,
-    // color: '#777', // Handled by theme
     marginBottom: 10,
   },
   actionsContainer: {

@@ -8,7 +8,7 @@ import { AirQualityData, TempHumidityData, ThermalImagerData, VibrationData } fr
 import { convertTimestamps } from '@/utils/firebaseUtils';
 import {
   addDoc,
-  collection, // ADDED: For permanent deletion
+  collection, deleteDoc, // ADDED: For permanent deletion
   doc,
   getDoc,
   getDocs,
@@ -124,76 +124,56 @@ export const RoomService = {
     }
   },
 
-  // FIXED: Simplified archiving with proper permissions
+  // SIMPLIFIED: Archive room with relaxed validation
   archiveRoom: async (roomId: string): Promise<void> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
       
-      // Get current room data first
-      const roomDoc = await getDoc(roomDocRef);
-      if (!roomDoc.exists()) {
-        throw new Error(`Room ${roomId} not found`);
-      }
-      
-      const currentData = roomDoc.data();
-      
-      const updateData = {
-        ...currentData,
+      // Simple update - just set archive flags
+      await updateDoc(roomDocRef, {
         isArchived: true,
-        archivedAt: serverTimestamp(),
+        archivedAt: new Date(),
         isMonitored: false,
-      };
+      });
       
-      await updateDoc(roomDocRef, updateData);
       console.log('Room archived:', roomId);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error archiving room ${roomId}:`, error);
-      throw error;
+      throw new Error(`Failed to archive room: ${error.message}`);
     }
   },
 
+  // SIMPLIFIED: Restore room
   restoreRoom: async (roomId: string): Promise<void> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
       
-      // Get current room data first
-      const roomDoc = await getDoc(roomDocRef);
-      if (!roomDoc.exists()) {
-        throw new Error(`Room ${roomId} not found`);
-      }
-      
-      const currentData = roomDoc.data();
-      
-      // Remove archivedAt field by creating new object without it
-      const { archivedAt, ...restoreData } = currentData;
-      const updateData = {
-        ...restoreData,
+      // Simple update - remove archive flags
+      await updateDoc(roomDocRef, {
         isArchived: false,
-      };
+        archivedAt: null, // Clear the archived timestamp
+      });
       
-      await updateDoc(roomDocRef, updateData);
       console.log('Room restored:', roomId);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error restoring room ${roomId}:`, error);
-      throw error;
+      throw new Error(`Failed to restore room: ${error.message}`);
     }
   },
 
-  permanentlyDeleteRoom: async (roomId: string): Promise<void> => {
+  // SIMPLIFIED: Delete room with better error handling
+  deleteRoom: async (roomId: string): Promise<void> => {
     try {
+      console.log(`Attempting to delete room: ${roomId}`);
+      
+      // Delete the room document
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
-      const batch = writeBatch(db);
-      const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, roomId, SENSORS_SUBCOLLECTION);
-      const sensorsSnapshot = await getDocs(sensorsCollectionRef);
-      sensorsSnapshot.forEach(sensorDoc => {
-        batch.delete(doc(sensorsCollectionRef, sensorDoc.id));
-      });
-      batch.delete(roomDocRef);
-      await batch.commit();
-      console.log('Room and its sensors permanently deleted:', roomId);
-    } catch (error) {
-      console.error(`Error permanently deleting room ${roomId}:`, error);
-      throw error;
+      await deleteDoc(roomDocRef);
+      
+      console.log(`Room ${roomId} deleted successfully`);
+    } catch (error: any) {
+      console.error(`Error deleting room ${roomId}:`, error);
+      throw new Error(`Failed to delete room: ${error.message}`);
     }
   },
 
