@@ -6,7 +6,11 @@ import { AuthService } from '@/modules/auth/services/AuthService';
 import { SplashScreen, useRouter } from 'expo-router';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native'; // Standard View
+import { ActivityIndicator, LogBox, StyleSheet, View } from 'react-native'; // Standard View
+
+LogBox.ignoreLogs([
+  'Warning: Text strings must be rendered within a <Text> component.'
+]);
 
 // Prevent the splash screen from hiding automatically until we've loaded our initial data.
 SplashScreen.preventAutoHideAsync();
