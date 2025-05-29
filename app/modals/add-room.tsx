@@ -1,9 +1,9 @@
 // labwatch-app/app/modals/add-room.tsx
-import Card from '@/components/Card';
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { RoomService } from '@/modules/rooms/services/RoomService';
+import { Ionicons } from '@expo/vector-icons'; // Added for header icon
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   Dimensions,
   FlatList,
   Modal,
+  SafeAreaView, // Changed from ThemedView for consistency
   ScrollView,
   StyleSheet,
   Switch,
@@ -40,22 +41,19 @@ export default function AddRoomModal() {
   const [showModuleDropdown, setShowModuleDropdown] = useState(false);
 
   // Theme colors
-  const containerBackgroundColor = useThemeColor({}, 'background');
-  const cardBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'cardBackground');
+  const backgroundColor = useThemeColor({}, 'background');
+  const surfaceColor = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'cardBackground'); 
   const inputBackgroundColor = useThemeColor({ light: '#F2F2F7', dark: '#2C2C2E' }, 'inputBackground');
-  const inputTextColor = useThemeColor({}, 'text');
-  const inputBorderColor = useThemeColor({ light: '#E5E5EA', dark: '#38383A' }, 'borderColor');
-  const placeholderTextColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'icon');
-  const buttonBackgroundColor = useThemeColor({}, 'tint');
-  const titleColor = useThemeColor({}, 'text');
-  const labelColor = useThemeColor({ light: '#1C1C1E', dark: '#FFFFFF' }, 'text');
-  const subtitleColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'tabIconDefault');
-  const switchThumbColorEnabled = useThemeColor({}, 'tint');
+  const textColor = useThemeColor({}, 'text');
+  const placeholderTextColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'icon'); 
+  const textSecondaryColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'tabIconDefault');
+  const borderColor = useThemeColor({ light: '#E5E5EA', dark: '#38383A' }, 'borderColor');
+  const tintColor = useThemeColor({}, 'tint');
+  const switchThumbColorEnabled = tintColor;
   const switchThumbColorDisabled = useThemeColor({ light: '#FFFFFF', dark: '#39393D' }, 'icon');
-  const switchTrackColorTrue = useThemeColor({ light: "#34C759", dark: "#30D158" }, 'tint');
-  const switchTrackColorFalse = useThemeColor({ light: "#E9E9EA", dark: "#39393D" }, 'icon');
-  const dropdownBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'cardBackground');
-  const dropdownBorderColor = useThemeColor({ light: '#E5E5EA', dark: '#38383A' }, 'borderColor');
+  const switchTrackColorTrue = tintColor + '40'; 
+  const switchTrackColorFalse = borderColor;     
+  const dropdownModalBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'cardBackground');
 
   const handleAddRoom = async () => {
     if (!roomName.trim() || !location.trim()) {
@@ -100,143 +98,153 @@ export default function AddRoomModal() {
 
   const renderModuleItem = ({ item }: { item: typeof ESP32_MODULES[0] }) => (
     <TouchableOpacity
-      style={[styles.dropdownItem, { backgroundColor: dropdownBackgroundColor, borderBottomColor: dropdownBorderColor }]}
+      style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
       onPress={() => {
         setSelectedModule(item);
         setShowModuleDropdown(false);
       }}
     >
-      <ThemedText style={[styles.dropdownItemText, { color: labelColor }]}>{item.name}</ThemedText>
-      <ThemedText style={[styles.dropdownItemSubtext, { color: subtitleColor }]}>{item.type}</ThemedText>
+      <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
+      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.type}</ThemedText>
     </TouchableOpacity>
   );
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Card style={[styles.card, { backgroundColor: cardBackgroundColor }]}>
-          <ThemedText style={[styles.title, { color: titleColor }]}>Add New Room</ThemedText>
-          <ThemedText style={[styles.subtitle, { color: subtitleColor }]}>
-            Configure a new room for monitoring
-          </ThemedText>
-
-          <ThemedView style={styles.section}>
-            <ThemedText style={[styles.sectionLabel, { color: labelColor }]}>Room Information</ThemedText>
-            
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={[styles.inputLabel, { color: labelColor }]}>Room Name</ThemedText>
-              <TextInput
-                style={[styles.input, { 
-                  backgroundColor: inputBackgroundColor, 
-                  color: inputTextColor, 
-                  borderColor: inputBorderColor 
-                }]}
-                placeholder="e.g., Lab Alpha, Chemistry Lab 1"
-                value={roomName}
-                onChangeText={setRoomName}
-                placeholderTextColor={placeholderTextColor}
-              />
-            </ThemedView>
-
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={[styles.inputLabel, { color: labelColor }]}>Location</ThemedText>
-              <TextInput
-                style={[styles.input, { 
-                  backgroundColor: inputBackgroundColor, 
-                  color: inputTextColor, 
-                  borderColor: inputBorderColor 
-                }]}
-                placeholder="e.g., Building A, Floor 2, Room 201"
-                value={location}
-                onChangeText={setLocation}
-                placeholderTextColor={placeholderTextColor}
-              />
-            </ThemedView>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Room Information Section */}
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="information-circle-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Room Information</ThemedText>
           </ThemedView>
-
-          <ThemedView style={styles.section}>
-            <ThemedText style={[styles.sectionLabel, { color: labelColor }]}>ESP32 Sensor Module</ThemedText>
-            
-            <TouchableOpacity
-              style={[styles.dropdown, { 
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Room Name</ThemedText>
+            <TextInput
+              style={[styles.input, { 
                 backgroundColor: inputBackgroundColor, 
-                borderColor: inputBorderColor 
+                color: textColor, 
+                borderColor: borderColor 
               }]}
-              onPress={() => setShowModuleDropdown(true)}
-            >
-              {selectedModule ? (
-                <ThemedView style={styles.selectedModuleContent}>
-                  <ThemedText style={[styles.selectedModuleText, { color: inputTextColor }]}>
-                    {selectedModule.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.selectedModuleType, { color: subtitleColor }]}>
-                    {selectedModule.type}
-                  </ThemedText>
-                </ThemedView>
-              ) : (
-                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                  Select ESP32 Module (Optional)
-                </ThemedText>
-              )}
-              <ThemedText style={[styles.dropdownArrow, { color: subtitleColor }]}>▼</ThemedText>
-            </TouchableOpacity>
+              placeholder="e.g., Lab Alpha, Chemistry Lab 1"
+              value={roomName}
+              onChangeText={setRoomName}
+              placeholderTextColor={placeholderTextColor}
+            />
           </ThemedView>
 
-          <ThemedView style={styles.section}>
-            <ThemedText style={[styles.sectionLabel, { color: labelColor }]}>Monitoring Settings</ThemedText>
-            
-            <ThemedView style={[styles.switchContainer, { backgroundColor: 'transparent' }]}>
-              <ThemedView style={styles.switchLabelContainer}>
-                <ThemedText style={[styles.switchLabel, { color: labelColor }]}>Enable Monitoring</ThemedText>
-                <ThemedText style={[styles.switchDescription, { color: subtitleColor }]}>
-                  Activate real-time sensor monitoring for this room
-                </ThemedText>
-              </ThemedView>
-              <Switch
-                trackColor={{ false: switchTrackColorFalse, true: switchTrackColorTrue }}
-                thumbColor={isMonitored ? switchThumbColorEnabled : switchThumbColorDisabled}
-                ios_backgroundColor={switchTrackColorFalse}
-                onValueChange={setIsMonitored}
-                value={isMonitored}
-              />
-            </ThemedView>
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Location</ThemedText>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: inputBackgroundColor, 
+                color: textColor, 
+                borderColor: borderColor 
+              }]}
+              placeholder="e.g., Building A, Floor 2, Room 201"
+              value={location}
+              onChangeText={setLocation}
+              placeholderTextColor={placeholderTextColor}
+            />
           </ThemedView>
+        </ThemedView>
 
-          <ThemedView style={styles.buttonSection}>
-            {isLoading ? (
-              <ThemedView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={buttonBackgroundColor} />
-                <ThemedText style={[styles.loadingText, { color: subtitleColor }]}>
-                  Creating Room...
+        {/* ESP32 Module Section */}
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="hardware-chip-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>ESP32 Sensor Module</ThemedText>
+          </ThemedView>
+          
+          <TouchableOpacity
+            style={[styles.dropdown, { 
+              backgroundColor: inputBackgroundColor, 
+              borderColor: borderColor 
+            }]}
+            onPress={() => setShowModuleDropdown(true)}
+          >
+            {selectedModule ? (
+              <ThemedView style={styles.selectedModuleContent}>
+                <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
+                  {selectedModule.name}
+                </ThemedText>
+                <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
+                  {selectedModule.type}
                 </ThemedText>
               </ThemedView>
             ) : (
-              <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: buttonBackgroundColor }]}
-                onPress={handleAddRoom}
-              >
-                <ThemedText style={styles.primaryButtonText}>Add Room</ThemedText>
-              </TouchableOpacity>
+              <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                Select ESP32 Module (Optional)
+              </ThemedText>
             )}
+            <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Monitoring Settings Section */}
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="pulse-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Monitoring Settings</ThemedText>
           </ThemedView>
-        </Card>
+          
+          <ThemedView style={styles.switchRow}>
+            <ThemedView style={styles.switchContent}>
+              <ThemedText style={[styles.switchLabel, { color: textColor }]}>Enable Monitoring</ThemedText>
+              <ThemedText style={[styles.switchDescription, { color: textSecondaryColor }]}>
+                Activate real-time sensor monitoring for this room
+              </ThemedText>
+            </ThemedView>
+            <Switch
+              trackColor={{ false: switchTrackColorFalse, true: switchTrackColorTrue }}
+              thumbColor={isMonitored ? switchThumbColorEnabled : switchThumbColorDisabled}
+              ios_backgroundColor={switchTrackColorFalse}
+              onValueChange={setIsMonitored}
+              value={isMonitored}
+            />
+          </ThemedView>
+        </ThemedView>
       </ScrollView>
+
+      {/* Bottom Action */}
+      <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
+        {isLoading ? (
+          <ThemedView style={styles.loadingButton}>
+            <ActivityIndicator size="small" color={tintColor} />
+            <ThemedText style={[styles.loadingButtonText, { color: textSecondaryColor }]}>
+              Creating Room...
+            </ThemedText>
+          </ThemedView>
+        ) : (
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: tintColor }]}
+            onPress={handleAddRoom}
+          >
+            <ThemedText style={styles.primaryButtonText}>Add Room</ThemedText>
+          </TouchableOpacity>
+        )}
+      </ThemedView>
 
       {/* Module Selection Modal */}
       <Modal
         visible={showModuleDropdown}
         transparent={true}
-        animationType="fade"
+        animationType="slide" 
         onRequestClose={() => setShowModuleDropdown(false)}
       >
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowModuleDropdown(false)}
+          onPressOut={() => setShowModuleDropdown(false)} 
         >
-          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownBackgroundColor, borderColor: dropdownBorderColor }]}>
-            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: dropdownBorderColor }]}>
-              <ThemedText style={[styles.dropdownTitle, { color: titleColor }]}>Select ESP32 Module</ThemedText>
+          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor: borderColor }]}>
+            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select ESP32 Module</ThemedText>
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => {
@@ -244,7 +252,7 @@ export default function AddRoomModal() {
                   setShowModuleDropdown(false);
                 }}
               >
-                <ThemedText style={[styles.clearButtonText, { color: buttonBackgroundColor }]}>Clear</ThemedText>
+                <ThemedText style={[styles.clearButtonText, { color: tintColor }]}>Clear</ThemedText>
               </TouchableOpacity>
             </ThemedView>
             <FlatList
@@ -257,70 +265,90 @@ export default function AddRoomModal() {
           </ThemedView>
         </TouchableOpacity>
       </Modal>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
+// Styles adapted from edit-room.tsx and refined
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    padding: Layout.spacing.lg,
-  },
-  card: {
-    padding: Layout.spacing.xl,
-    borderRadius: Layout.borderRadius.lg,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  title: {
-    fontSize: Layout.fontSize.xxl,
-    fontWeight: Layout.fontWeight.bold,
-    marginBottom: Layout.spacing.xs,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: Layout.fontSize.md,
-    textAlign: 'center',
-    marginBottom: Layout.spacing.xl,
-  },
-  section: {
-    marginBottom: Layout.spacing.xl,
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     backgroundColor: 'transparent',
   },
-  sectionLabel: {
-    fontSize: Layout.fontSize.lg,
-    fontWeight: Layout.fontWeight.semibold,
-    marginBottom: Layout.spacing.md,
+  headerButton: {
+    width: 44, 
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  headerTitle: {
+    fontSize: Layout.fontSize.xl,
+    fontFamily: 'Montserrat-Bold', 
+    fontWeight: Layout.fontWeight.bold,
+  },
+  
+  // Content
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: Layout.spacing.lg,
+    gap: Layout.spacing.xl, 
+  },
+  
+  // Sections
+  section: {
+    backgroundColor: 'transparent', 
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.md,
+    gap: Layout.spacing.sm,
+    backgroundColor: 'transparent',
+  },
+  sectionTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold', 
+    fontWeight: Layout.fontWeight.semibold,
+  },
+  
+  // Input Groups
   inputGroup: {
     marginBottom: Layout.spacing.lg,
     backgroundColor: 'transparent',
   },
   inputLabel: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium', 
     fontWeight: Layout.fontWeight.medium,
     marginBottom: Layout.spacing.sm,
   },
   input: {
-    height: 50,
+    height: 52, 
     borderWidth: 1,
-    borderRadius: Layout.borderRadius.md,
-    paddingHorizontal: Layout.spacing.md,
+    borderRadius: Layout.borderRadius.lg, 
+    paddingHorizontal: Layout.spacing.lg,
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular', 
   },
+  
+  // Dropdown (for selecting ESP32 module in the form)
   dropdown: {
-    height: 60,
+    minHeight: 52, 
     borderWidth: 1,
-    borderRadius: Layout.borderRadius.md,
-    paddingHorizontal: Layout.spacing.md,
+    borderRadius: Layout.borderRadius.lg, 
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -331,85 +359,99 @@ const styles = StyleSheet.create({
   },
   selectedModuleText: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
   selectedModuleType: {
     fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
     marginTop: 2,
   },
   dropdownPlaceholder: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
     flex: 1,
   },
-  dropdownArrow: {
-    fontSize: Layout.fontSize.sm,
-    marginLeft: Layout.spacing.sm,
-  },
-  switchContainer: {
+  
+  // Switch
+  switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Layout.spacing.md,
-    paddingHorizontal: Layout.spacing.sm,
-    borderRadius: Layout.borderRadius.md,
+    backgroundColor: 'transparent',
+    paddingVertical: Layout.spacing.sm, 
   },
-  switchLabelContainer: {
+  switchContent: {
     flex: 1,
+    marginRight: Layout.spacing.lg,
     backgroundColor: 'transparent',
   },
   switchLabel: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
   switchDescription: {
     fontSize: Layout.fontSize.sm,
-    marginTop: 2,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 4,
+    lineHeight: Layout.fontSize.sm * 1.4,
   },
-  buttonSection: {
-    marginTop: Layout.spacing.lg,
-    backgroundColor: 'transparent',
+  
+  // Bottom Action (Button area)
+  bottomAction: {
+    padding: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), 
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  loadingContainer: {
+  loadingButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Layout.spacing.lg,
+    justifyContent: 'center',
+    height: 52,
     backgroundColor: 'transparent',
+    gap: Layout.spacing.sm,
   },
-  loadingText: {
-    marginTop: Layout.spacing.md,
+  loadingButtonText: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
   },
   primaryButton: {
-    height: 50,
-    borderRadius: Layout.borderRadius.md,
+    height: 52,
+    borderRadius: Layout.borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: Layout.fontSize.lg,
+    color: '#FFFFFF', 
+    fontSize: Layout.fontSize.md, 
+    fontFamily: 'Montserrat-SemiBold',
     fontWeight: Layout.fontWeight.semibold,
   },
-  modalOverlay: {
+  
+  // Modal for ESP32 Module Selection
+  modalOverlay: { 
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    justifyContent: 'flex-end', 
   },
-  dropdownModal: {
-    width: SCREEN_WIDTH * 0.85,
-    maxHeight: 400,
-    borderRadius: Layout.borderRadius.lg,
-    borderWidth: 1,
+  dropdownModal: { 
+    maxHeight: SCREEN_WIDTH, 
+    borderTopLeftRadius: Layout.borderRadius.lg, 
+    borderTopRightRadius: Layout.borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   dropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Layout.spacing.lg,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
   },
   dropdownTitle: {
     fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold',
     fontWeight: Layout.fontWeight.semibold,
   },
   clearButton: {
@@ -418,21 +460,23 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
   dropdownList: {
-    maxHeight: 300,
+    maxHeight: 300, 
   },
   dropdownItem: {
     padding: Layout.spacing.lg,
-    borderBottomWidth: 1,
   },
   dropdownItemText: {
     fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
   dropdownItemSubtext: {
     fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
     marginTop: 2,
   },
 });
