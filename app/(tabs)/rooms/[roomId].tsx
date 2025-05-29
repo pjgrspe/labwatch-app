@@ -216,12 +216,60 @@ export default function RoomDetailScreen() {
                 Environmental
               </ThemedText>
               <ThemedView style={styles.gaugesGrid}> {/* Use ThemedView */}
-                {tempHumidity && (<DialGauge value={tempHumidity.temperature} label="Temperature" unit="°C" size={dialGaugeSize} statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} coldColor={themeColors.accentLight} hotColor={themeColors.errorText} />)}
-                {tempHumidity && (<DialGauge value={tempHumidity.humidity} label="Humidity" unit="%" size={dialGaugeSize} statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} coldColor={themeColors.accent} hotColor={themeColors.infoText} />)}
+                {tempHumidity && (
+                  <DialGauge 
+                    value={tempHumidity.temperature} 
+                    label="Temperature" 
+                    sensorType="tempHumidity"
+                    dataType="temperature"
+                    useAlertBasedRange={true}
+                    size={dialGaugeSize} 
+                    statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
+                    coldColor={themeColors.accentLight} 
+                    hotColor={themeColors.errorText} 
+                  />
+                )}
+                {tempHumidity && (
+                  <DialGauge 
+                    value={tempHumidity.humidity} 
+                    label="Humidity" 
+                    sensorType="tempHumidity"
+                    dataType="humidity"
+                    useAlertBasedRange={true}
+                    size={dialGaugeSize} 
+                    statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
+                    coldColor={themeColors.accent} 
+                    hotColor={themeColors.infoText} 
+                  />
+                )}
               </ThemedView>
               <ThemedView style={[styles.gaugesGrid, {marginTop: (tempHumidity && airQuality) ? Layout.spacing.md : 0}]}> {/* Use ThemedView */}
-                {airQuality && (<DialGauge value={airQuality.pm25} label="PM2.5" unit="µg/m³" max={150} size={dialGaugeSize} statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} coldColor={themeColors.successText} hotColor={themeColors.warningText} />)}
-                {airQuality && (<DialGauge value={airQuality.pm10} label="PM10" unit="µg/m³" max={250} size={dialGaugeSize} statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} coldColor={themeColors.successText} hotColor={themeColors.warningText} />)}
+                {airQuality && (
+                  <DialGauge 
+                    value={airQuality.pm25} 
+                    label="PM2.5" 
+                    sensorType="airQuality"
+                    dataType="pm25"
+                    useAlertBasedRange={true}
+                    size={dialGaugeSize} 
+                    statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
+                    coldColor={themeColors.successText} 
+                    hotColor={themeColors.warningText} 
+                  />
+                )}
+                {airQuality && (
+                  <DialGauge 
+                    value={airQuality.pm10} 
+                    label="PM10" 
+                    sensorType="airQuality"
+                    dataType="pm10"
+                    useAlertBasedRange={true}
+                    size={dialGaugeSize} 
+                    statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
+                    coldColor={themeColors.successText} 
+                    hotColor={themeColors.warningText} 
+                  />
+                )}
               </ThemedView>
               {(!tempHumidity && !airQuality && sensorData) && <ThemedText style={[styles.noDataTextSmall, {color: subtleTextColor}]}>No environmental data.</ThemedText>}
             </Card>
@@ -234,6 +282,30 @@ export default function RoomDetailScreen() {
               </ThemedText>
               <HeatmapGrid data={thermalData.pixels} minTempThreshold={15} maxTempThreshold={45} />
               <ThemedView style={styles.thermalStatsContainer}> {/* Use ThemedView */}
+                <DialGauge 
+                  value={thermalData.avgTemp} 
+                  label="Avg Temp" 
+                  sensorType="thermalImager"
+                  dataType="avgTemp"
+                  useAlertBasedRange={true}
+                  size={Math.min(dialGaugeSize, 100)} 
+                  statusColor={getStatusColorForDial('normal', currentTheme)} 
+                  coldColor={themeColors.accentLight} 
+                  hotColor={themeColors.errorText} 
+                />
+                <DialGauge 
+                  value={thermalData.maxTemp} 
+                  label="Max Temp" 
+                  sensorType="thermalImager"
+                  dataType="maxTemp"
+                  useAlertBasedRange={true}
+                  size={Math.min(dialGaugeSize, 100)} 
+                  statusColor={getStatusColorForDial('normal', currentTheme)} 
+                  coldColor={themeColors.accentLight} 
+                  hotColor={themeColors.errorText} 
+                />
+              </ThemedView>
+              <ThemedView style={styles.thermalTextStatsContainer}>
                  <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Min: {thermalData.minTemp.toFixed(1)}°C</ThemedText>
                  <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Avg: {thermalData.avgTemp.toFixed(1)}°C</ThemedText>
                  <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Max: {thermalData.maxTemp.toFixed(1)}°C</ThemedText>
@@ -246,6 +318,17 @@ export default function RoomDetailScreen() {
                 Vibration Sensor
               </ThemedText>
               <ThemedView style={styles.vibrationContainer}>
+                <DialGauge 
+                  value={vibrationData.rmsAcceleration} 
+                  label="RMS Acceleration" 
+                  sensorType="vibration"
+                  dataType="rmsAcceleration"
+                  useAlertBasedRange={true}
+                  size={dialGaugeSize} 
+                  statusColor={getStatusColorForDial(vibrationData.status || 'normal', currentTheme)} 
+                  coldColor={themeColors.successText} 
+                  hotColor={themeColors.errorText} 
+                />
                 <ThemedText style={[styles.vibrationLabel, { color: textColor }]}>
                   {`${vibrationData.name || 'Vibration Sensor'} - ${vibrationData.status || 'Unknown'}`}
                 </ThemedText>
@@ -359,9 +442,17 @@ const styles = StyleSheet.create({
   thermalStatsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
     marginTop: Layout.spacing.md,
     paddingTop: Layout.spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
+  },
+  thermalTextStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: Layout.spacing.md,
+    paddingTop: Layout.spacing.sm,
     backgroundColor: 'transparent',
   },
   thermalStatText: {
