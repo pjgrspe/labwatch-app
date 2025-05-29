@@ -1,25 +1,24 @@
+// labwatch-app/modules/dashboard/components/RecentAlertsSection.tsx
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
-import { Text as ThemedText } from '@/components/Themed';
-import { ColorName } from '@/constants/Colors'; // Added Colors
+import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { ColorName } from '@/constants/Colors';
 import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { AlertSeverity, Alert as AlertType, AlertType as AlertTypeStrings } from '@/types/alerts'; // Added AlertTypeStrings
+import { AlertSeverity, Alert as AlertType, AlertType as AlertTypeStrings } from '@/types/alerts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-// Consistent severity theme colors with alerts/index.tsx
 const severityThemeColors: { [key in AlertSeverity]: ColorName } = {
   critical: 'errorText',
   high: 'warningText',
-  medium: 'infoText', // Matched to alerts/index.tsx
+  medium: 'infoText', 
   low: 'successText',
-  info: 'icon', // Matched to alerts/index.tsx
+  info: 'icon', 
 };
 
-// Consistent icon mapping with alerts/index.tsx
 const getIconForAlertType = (type: AlertTypeStrings): keyof typeof Ionicons.glyphMap => {
   switch (type) {
     case 'high_temperature':
@@ -65,16 +64,15 @@ const formatTimeAgo = (timestamp: Date): string => {
 interface RecentAlertCardProps {
   alert: AlertType;
   onPress: () => void;
-  isLastItemInSection?: boolean; // Added for consistency with alerts/index.tsx styling
 }
 
-const RecentAlertCard: React.FC<RecentAlertCardProps> = ({ alert, onPress, isLastItemInSection }) => {
+const RecentAlertCardDisplay: React.FC<RecentAlertCardProps> = ({ alert, onPress }) => {
   const itemSeverityColor = useThemeColor({}, severityThemeColors[alert.severity] || 'text');
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const titleColor = useThemeColor({}, 'text');
   const detailColor = useThemeColor({}, 'icon');
   const acknowledgedColor = useThemeColor({}, 'successText');
-  const borderColor = useThemeColor({}, 'borderColor');
+  const borderColor = useThemeColor({}, 'borderColor'); // For acknowledged alerts
 
   const timestamp = alert.timestamp instanceof Date
     ? alert.timestamp
@@ -83,7 +81,7 @@ const RecentAlertCard: React.FC<RecentAlertCardProps> = ({ alert, onPress, isLas
       : new Date();
 
   const timeString = formatTimeAgo(timestamp);
-  const iconName = getIconForAlertType(alert.type as AlertTypeStrings); // Cast to AlertTypeStrings
+  const iconName = getIconForAlertType(alert.type as AlertTypeStrings);
 
   const acknowledgedAt = alert.acknowledgedAt instanceof Date
     ? alert.acknowledgedAt
@@ -99,82 +97,88 @@ const RecentAlertCard: React.FC<RecentAlertCardProps> = ({ alert, onPress, isLas
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
+      style={styles.alertCardTouchable} // Added for consistent margin
     >
-      <Card style={[
-        styles.alertCard, // Updated styles below
-        {
-          backgroundColor: cardBackgroundColor,
-          borderColor: alert.acknowledged ? borderColor : itemSeverityColor,
-          borderWidth: alert.acknowledged ? 1 : 2, // Match alerts/index.tsx
-          opacity: alert.acknowledged ? 0.7 : 1,    // Match alerts/index.tsx
-        },
-        isLastItemInSection ? styles.lastItemInSection : {} // Match alerts/index.tsx
-      ]}>
-        <View style={styles.alertContent}>
-          <View style={styles.alertIconContainer}>
+      <Card 
+        style={[
+          styles.alertCard,
+          {
+            // Card component handles background color via its own hook
+            borderColor: alert.acknowledged ? borderColor : itemSeverityColor, // Use theme borderColor for acknowledged
+            borderLeftColor: alert.acknowledged ? acknowledgedColor : itemSeverityColor, // Keep colored left border distinct
+            borderLeftWidth: 4, // Consistent left border
+            borderWidth: alert.acknowledged ? StyleSheet.hairlineWidth : 1, // Thicker border for active, thinner for acknowledged
+            opacity: alert.acknowledged ? 0.8 : 1,    
+          }
+        ]}
+        paddingSize="md" // Use Card's padding prop
+      >
+        <ThemedView style={styles.alertContent}>
+          <ThemedView style={styles.alertIconContainer}>
             <Ionicons
               name={iconName}
-              size={32} // Matched from alerts/index.tsx
+              size={28} // Standardized icon size
               color={alert.acknowledged ? acknowledgedColor : itemSeverityColor}
             />
             {!alert.acknowledged && (
-              <View style={[styles.severityBadge, { backgroundColor: itemSeverityColor }]}>
-                <ThemedText style={styles.severityBadgeText}>
-                  {alert.severity === 'critical' ? '!' : alert.severity.charAt(0).toUpperCase()}
-                </ThemedText>
-              </View>
+              <ThemedView style={[styles.severityBadge, { backgroundColor: itemSeverityColor }]}>
+                <Ionicons 
+                    name={alert.severity === 'critical' ? "warning" : "information-circle"} 
+                    size={10} 
+                    color="#FFFFFF" 
+                />
+              </ThemedView>
             )}
-          </View>
+          </ThemedView>
 
-          <View style={styles.alertTextContainer}>
-            <View style={styles.alertHeader}>
-              <ThemedText style={[styles.alertMessage, { color: titleColor }]} numberOfLines={2}>
-                {/* Use message if available, otherwise format type */}
+          <ThemedView style={styles.alertTextContainer}>
+            <ThemedView style={styles.alertHeader}>
+              <ThemedText style={[styles.alertMessage, { color: titleColor }]} numberOfLines={1}>
                 {alert.message?.split(':')[0] || alert.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </ThemedText>
-              <View style={styles.statusContainer}>
+              <ThemedView style={styles.statusContainer}>
                 {alert.acknowledged ? (
                   <View style={[styles.statusBadge, { backgroundColor: acknowledgedColor + '20' }]}>
-                    <Ionicons name="checkmark-circle" size={14} color={acknowledgedColor} />
+                    <Ionicons name="checkmark-done" size={12} color={acknowledgedColor} />
                     <ThemedText style={[styles.statusText, { color: acknowledgedColor }]}>
                       ACK
                     </ThemedText>
                   </View>
                 ) : (
                   <View style={[styles.statusBadge, { backgroundColor: itemSeverityColor + '20' }]}>
-                    <ThemedText style={[styles.statusText, { color: itemSeverityColor }]}>
+                    <ThemedText style={[styles.statusText, { color: itemSeverityColor, fontFamily: 'Montserrat-Bold'}]}>
                       {alert.severity.toUpperCase()}
                     </ThemedText>
                   </View>
                 )}
-              </View>
-            </View>
+              </ThemedView>
+            </ThemedView>
 
-            <View style={styles.alertMeta}>
-              <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={14} color={detailColor} />
+            <ThemedView style={styles.alertMeta}>
+              <ThemedView style={styles.metaRow}>
+                <Ionicons name="cube-outline" size={14} color={detailColor} />
                 <ThemedText style={[styles.metaText, { color: detailColor }]} numberOfLines={1}>
                   {alert.roomName}
                   {alert.sensorId && ` • ${alert.sensorId.substring(alert.sensorId.lastIndexOf('-') + 1)}`}
                 </ThemedText>
-              </View>
+              </ThemedView>
 
-              <View style={styles.metaRow}>
+              <ThemedView style={styles.metaRow}>
                 <Ionicons name="time-outline" size={14} color={detailColor} />
                 <ThemedText style={[styles.metaText, { color: detailColor }]}>
                   {timeString}
                 </ThemedText>
-              </View>
-            </View>
-          </View>
-        </View>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
 
         {alert.acknowledged && alert.acknowledgedByName && (
-          <View style={styles.acknowledgedInfo}>
+          <ThemedView style={[styles.acknowledgedInfo, {borderTopColor: borderColor}]}>
             <ThemedText style={[styles.acknowledgedByText, { color: detailColor }]}>
               Acknowledged by {alert.acknowledgedByName}{acknowledgedAtString}
             </ThemedText>
-          </View>
+          </ThemedView>
         )}
       </Card>
     </TouchableOpacity>
@@ -189,10 +193,9 @@ interface RecentAlertsSectionProps {
 
 const RecentAlertsSection: React.FC<RecentAlertsSectionProps> = ({ title, alerts, onPressViewAll }) => {
   const router = useRouter();
+  const iconColor = useThemeColor({}, 'icon');
   const sectionTitleColor = useThemeColor({}, 'text');
-  const cardBackgroundColor = useThemeColor({}, 'cardBackground'); // For empty state
-  const emptyStateIconColor = useThemeColor({}, 'successText'); // For empty state icon
-  const emptyStateTextColor = useThemeColor({}, 'text'); // For empty state text
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
 
   if (!alerts || alerts.length === 0) {
     return (
@@ -201,23 +204,20 @@ const RecentAlertsSection: React.FC<RecentAlertsSectionProps> = ({ title, alerts
           title={title}
           onPressViewAll={onPressViewAll}
         />
-        {/* Empty state styling matched from alerts/index.tsx */}
-        <View style={[styles.centered, { marginHorizontal: Layout.spacing.md }]}>
-            <Card style={[styles.emptyStateCard, { backgroundColor: cardBackgroundColor }]}>
-                <Ionicons
-                    name="shield-checkmark-outline"
-                    size={48} // Adjusted from 70 to better fit the card
-                    color={emptyStateIconColor}
-                    style={styles.emptyStateIcon}
-                />
-                <ThemedText style={[styles.emptyStateTitle, { color: emptyStateTextColor }]}>
-                    All Clear
-                </ThemedText>
-                <ThemedText style={[styles.emptyStateMessage, { color: emptyStateTextColor, opacity: 0.7 }]}>
-                    No recent alerts. Your lab is running smoothly.
-                </ThemedText>
-            </Card>
-        </View>
+        <Card style={[styles.emptyStateCard, { backgroundColor: cardBackgroundColor }]} paddingSize="xl">
+            <Ionicons
+                name="shield-checkmark-outline"
+                size={48}
+                color={iconColor} // Use themed icon color
+                style={styles.emptyStateIcon}
+            />
+            <ThemedText style={[styles.emptyStateTitle, { color: sectionTitleColor }]}>
+                All Clear
+            </ThemedText>
+            <ThemedText style={[styles.emptyStateMessage, { color: iconColor }]}>
+                No recent alerts. Your lab is running smoothly.
+            </ThemedText>
+        </Card>
       </View>
     );
   }
@@ -228,13 +228,11 @@ const RecentAlertsSection: React.FC<RecentAlertsSectionProps> = ({ title, alerts
         title={title}
         onPressViewAll={onPressViewAll}
       />
-      {/* Removed listContainer to use direct margin on alertItemTouchable */}
-      {alerts.slice(0, 3).map((alert, index) => ( // Show max 3 alerts
-        <RecentAlertCard
+      {alerts.slice(0, 3).map((alert) => (
+        <RecentAlertCardDisplay // Renamed component
           key={alert.id}
           alert={alert}
           onPress={() => router.push(`/(tabs)/alerts/${alert.id}` as any)}
-          isLastItemInSection={index === Math.min(2, alerts.length -1)} // Apply last item style correctly
         />
       ))}
     </View>
@@ -243,134 +241,117 @@ const RecentAlertsSection: React.FC<RecentAlertsSectionProps> = ({ title, alerts
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Layout.spacing.lg, // Increased bottom margin for section
+    paddingHorizontal: Layout.spacing.md, // Horizontal padding for the section
   },
-  // Centered style for empty state text, from alerts/index.tsx
-  centered: {
-    // flex: 1, // Removed to allow it to sit within the section
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: Layout.spacing.lg, // Added padding
+  alertCardTouchable: {
+    marginBottom: Layout.spacing.md, // Space between alert cards
   },
-  emptyStateCard: { // Card for empty state, similar to alerts/index.tsx but simpler for dashboard
-    padding: Layout.spacing.lg,
-    alignItems: 'center',
-    width: '100%', // Take full width of its container
-    borderRadius: Layout.borderRadius.lg,
-  },
-  emptyStateIcon: {
-    marginBottom: Layout.spacing.md,
-  },
-  emptyStateTitle: {
-    fontSize: Layout.fontSize.lg, // Matched from alerts/index.tsx
-    fontFamily: 'Montserrat-Bold',
-    marginBottom: Layout.spacing.xs,
-  },
-  emptyStateMessage: {
-    fontSize: Layout.fontSize.sm, // Matched from alerts/index.tsx
-    fontFamily: 'Montserrat-Regular',
-    textAlign: 'center',
-  },
-
   alertCard: {
-    paddingVertical: Layout.spacing.md,
-    paddingHorizontal: Layout.spacing.md,
-    borderRadius: Layout.borderRadius.lg,
-    position: 'relative',
-    // Shadow from alerts/index.tsx (Card component might handle this already or can be added)
-    // elevation: 1,
-    // shadowColor: '#000000',
-    // shadowOffset: { width: 0, height: 1 },
-    // shadowOpacity: 0.05,
-    // shadowRadius: 2,
+    
+    // paddingVertical and paddingHorizontal handled by Card's paddingSize prop
+    // borderRadius is handled by Card component
+    // shadow is handled by Card component
+    // borderLeftWidth, borderLeftColor, borderWidth, borderColor, opacity are set dynamically
   },
   alertContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Align items to the start for better text flow
+    alignItems: 'flex-start', 
     backgroundColor: 'transparent',
   },
   alertIconContainer: {
     position: 'relative',
     marginRight: Layout.spacing.md,
-    alignItems: 'center', // Center icon if needed
-    // No specific background needed here as per alerts/index.tsx style
+    paddingTop: Layout.spacing.xs /2, // Align icon better with text
   },
-  severityBadge: { // From alerts/index.tsx
+  severityBadge: { 
     position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 0, // Adjust position relative to icon
+    right: -Layout.spacing.xs, // Adjust position relative to icon
+    width: 18, // Standardized badge size
+    height: 18, // Standardized badge size
+    borderRadius: 9, // Fully rounded
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  severityBadgeText: { // From alerts/index.tsx
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    color: '#FFFFFF',
   },
   alertTextContainer: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  alertHeader: { // From alerts/index.tsx
+  alertHeader: { 
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Layout.spacing.sm, // Matched
+    alignItems: 'flex-start', // Align items to start
+    marginBottom: Layout.spacing.xs, // Reduced margin
   },
-  alertMessage: { // Renamed from alertTitle, matched styling from alerts/index.tsx
-    flex: 1,
+  alertMessage: { 
+    flex: 1, // Allow message to take space
     fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-SemiBold', // Matched
-    marginRight: Layout.spacing.sm, // Matched
-    lineHeight: Layout.fontSize.md * 1.3, // Matched
+    fontFamily: 'Montserrat-SemiBold', 
+    marginRight: Layout.spacing.sm, 
+    lineHeight: Layout.fontSize.md * 1.3, 
   },
-  statusContainer: { // From alerts/index.tsx
-    alignItems: 'flex-end',
+  statusContainer: { 
+    // alignItems: 'flex-end', // Not needed if badge is simple
   },
-  statusBadge: { // From alerts/index.tsx
+  statusBadge: { 
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.xs, // Reduced padding
     paddingVertical: Layout.spacing.xs / 2,
     borderRadius: Layout.borderRadius.sm,
+    marginTop: Layout.spacing.xs / 2, // Align with message if it wraps
   },
-  statusText: { // From alerts/index.tsx
-    fontSize: Layout.fontSize.xs,
-    fontFamily: 'Montserrat-Bold',
+  statusText: { 
+    fontSize: Layout.fontSize.xs, // Smaller status text
+    fontFamily: 'Montserrat-Medium', // Adjusted font weight
     marginLeft: Layout.spacing.xs / 2,
+    textTransform: 'uppercase',
   },
-  alertMeta: { // From alerts/index.tsx
-    gap: Layout.spacing.xs / 2,
+  alertMeta: { 
+    gap: Layout.spacing.xs, // Consistent gap
   },
-  metaRow: { // From alerts/index.tsx
+  metaRow: { 
     flexDirection: 'row',
     alignItems: 'center',
   },
-  metaText: { // From alerts/index.tsx, renamed from alertSubtitle & alertTime
-    fontSize: Layout.fontSize.sm, // Matched
-    fontFamily: 'Montserrat-Regular', // Matched
+  metaText: { 
+    fontSize: Layout.fontSize.sm, 
+    fontFamily: 'Montserrat-Regular', 
     marginLeft: Layout.spacing.xs,
-    flex: 1, // Allow text to take available space
+    flexShrink: 1, // Allow text to shrink if needed
   },
-  acknowledgedInfo: { // From alerts/index.tsx
+  acknowledgedInfo: { 
     marginTop: Layout.spacing.sm,
     paddingTop: Layout.spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    // borderTopColor: Colors.light.borderColor, // Handled by useThemeColor or direct value
-    borderTopColor: 'rgba(0,0,0,0.1)', // Fallback, useThemeColor preferred
+    // borderTopColor is set dynamically
   },
-  acknowledgedByText: { // From alerts/index.tsx
+  acknowledgedByText: { 
     fontSize: Layout.fontSize.xs,
     fontStyle: 'italic',
     fontFamily: 'Montserrat-Regular',
     textAlign: 'right',
   },
-  lastItemInSection: { // From alerts/index.tsx
-    // No specific style needed if marginBottom is handled by alertItemTouchable
-  }
+  emptyStateCard: {
+    // paddingSize: "xl", // This is a prop for the Card component, not a style property
+    alignItems: 'center',
+    marginTop: Layout.spacing.md, // Space from SectionHeader
+  },
+  emptyStateIcon: {
+    marginBottom: Layout.spacing.md,
+    opacity: 0.6,
+  },
+  emptyStateTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: Layout.spacing.xs,
+  },
+  emptyStateMessage: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
+    opacity: 0.7,
+  },
 });
 
 export default RecentAlertsSection;

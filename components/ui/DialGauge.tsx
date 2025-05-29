@@ -146,17 +146,6 @@ const DialGauge: React.FC<DialGaugeProps> = ({
   const progressAngle = totalAngle * percentage;
   const progressPath = createArcPath(startAngle, startAngle + progressAngle, radius);
 
-  // Get the interpolated color based on current value percentage
-  const getProgressColor = () => {
-    if (statusInfo.status === 'CRITICAL') return criticalColor;
-    if (statusInfo.status === 'WARNING') return dangerMarkerColor;
-    
-    // Use interpolated color based on percentage for normal status
-    return interpolateColor(coldColor, hotColor, percentage);
-  };
-
-  const progressColor = getProgressColor();
-
   // Danger zone arc (if applicable)
   const dangerPath = dangerPercentage >= 0 && dangerPercentage <= 1 
     ? createArcPath(startAngle + (totalAngle * dangerPercentage), startAngle + totalAngle, radius)
@@ -215,10 +204,22 @@ const DialGauge: React.FC<DialGaugeProps> = ({
       ]}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <Defs>
-            {/* Remove the progress gradient and keep only danger gradient */}
+            {/* Progress gradient */}
+            <LinearGradient id={`progressGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={coldColor} stopOpacity="1" />
+              <Stop offset="100%" stopColor={hotColor} stopOpacity="1" />
+            </LinearGradient>
+            
+            {/* Danger gradient */}
             <LinearGradient id={`dangerGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
               <Stop offset="0%" stopColor={dangerMarkerColor} stopOpacity="0.9" />
               <Stop offset="100%" stopColor={criticalColor} stopOpacity="1" />
+            </LinearGradient>
+
+            {/* Success gradient */}
+            <LinearGradient id={`successGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={successColor} stopOpacity="0.6" />
+              <Stop offset="100%" stopColor={coldColor} stopOpacity="1" />
             </LinearGradient>
           </Defs>
 
@@ -255,10 +256,14 @@ const DialGauge: React.FC<DialGaugeProps> = ({
             />
           )}
 
-          {/* Progress track - now uses interpolated color */}
+          {/* Progress track */}
           <Path
             d={progressPath}
-            stroke={progressColor}
+            stroke={
+              statusInfo.status === 'CRITICAL' ? criticalColor :
+              statusInfo.status === 'WARNING' ? dangerMarkerColor :
+              `url(#progressGradient-${label})`
+            }
             strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
@@ -306,7 +311,7 @@ const DialGauge: React.FC<DialGaugeProps> = ({
             <ThemedText style={[
               styles.valueText, 
               { 
-                color: progressColor, // Use the same interpolated color for the text
+                color: statusInfo.color, 
                 fontSize: valueFontSize,
                 fontWeight: statusInfo.status !== 'NORMAL' ? '800' : '300'
               }
@@ -314,7 +319,7 @@ const DialGauge: React.FC<DialGaugeProps> = ({
               {Math.round(value)}
               {showDegreeSymbol && (
                 <ThemedText style={[styles.degreeSymbol, { 
-                  color: progressColor, // Use the same interpolated color
+                  color: statusInfo.color, 
                   fontSize: valueFontSize * 0.4 
                 }]}>
                   °

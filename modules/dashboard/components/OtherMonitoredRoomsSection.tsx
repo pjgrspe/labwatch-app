@@ -1,16 +1,19 @@
+// labwatch-app/modules/dashboard/components/OtherMonitoredRoomsSection.tsx
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import Layout from '@/constants/Layout';
 import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
-import { TempHumidityData } from '@/types/sensor';
+import { TempHumidityData } from '@/types/sensor'; // Assuming this type includes 'name'
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { getStatusColorForDial } from '../utils/colorHelpers';
+import { getStatusColorForDial } from '../utils/colorHelpers'; // Ensure this path is correct
 
+// Define OtherRoomData to include 'name' if it's not in TempHumidityData
 interface OtherRoomData extends TempHumidityData {
   roomId: string;
+  name: string; // Explicitly add name if not in TempHumidityData
 }
 
 interface OtherMonitoredRoomsSectionProps {
@@ -19,7 +22,7 @@ interface OtherMonitoredRoomsSectionProps {
   onPressViewAll: () => void;
 }
 
-const RoomCard: React.FC<{ room: OtherRoomData; onPress: () => void }> = ({ room, onPress }) => {
+const RoomCardDisplay: React.FC<{ room: OtherRoomData; onPress: () => void }> = ({ room, onPress }) => {
   const currentTheme = useCurrentTheme();
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const titleColor = useThemeColor({}, 'text');
@@ -37,13 +40,13 @@ const RoomCard: React.FC<{ room: OtherRoomData; onPress: () => void }> = ({ room
   };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.roomCardTouchable}>
       <Card style={[
         styles.roomCard,
         { 
           backgroundColor: cardBackgroundColor,
-          borderColor: borderColor,
-          borderLeftColor: statusColor,
+          borderColor: borderColor, // Default border for the card
+          borderLeftColor: statusColor, // Status color for the left border
         }
       ]}>
         <ThemedView style={styles.roomCardContent}>
@@ -54,7 +57,7 @@ const RoomCard: React.FC<{ room: OtherRoomData; onPress: () => void }> = ({ room
             
             <ThemedView style={styles.roomTextContainer}>
               <ThemedText style={[styles.roomTitle, { color: titleColor }]} numberOfLines={1}>
-                {room.name}
+                {room.name || `Room ${room.roomId}`} 
               </ThemedText>
               <ThemedView style={styles.roomStatusContainer}>
                 <Ionicons 
@@ -77,7 +80,7 @@ const RoomCard: React.FC<{ room: OtherRoomData; onPress: () => void }> = ({ room
               </ThemedText>
             </ThemedView>
             
-            <ThemedView style={styles.metricDivider} />
+            <ThemedView style={[styles.metricDivider, {backgroundColor: borderColor}]} />
             
             <ThemedView style={styles.metricItem}>
               <Ionicons name="water-outline" size={16} color={subtitleColor} />
@@ -97,8 +100,12 @@ const OtherMonitoredRoomsSection: React.FC<OtherMonitoredRoomsSectionProps> = ({
   roomsData,
   onPressViewAll,
 }) => {
-  const sectionTitleColor = useThemeColor({}, 'text');
-  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const sectionTitleColor = useThemeColor({}, 'text'); // For empty state text
+  const iconColor = useThemeColor({}, 'icon'); // For empty state icon
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground'); // For empty state card
+
+  // Note: The parent dashboard.tsx's sectionWrapper handles horizontal padding.
+  // This component's main container (styles.container) only needs to manage vertical layout.
 
   if (!roomsData || roomsData.length === 0) {
     return (
@@ -106,64 +113,69 @@ const OtherMonitoredRoomsSection: React.FC<OtherMonitoredRoomsSectionProps> = ({
         <SectionHeader 
           title={title} 
           onPressViewAll={onPressViewAll} 
+          // SectionHeader already has paddingHorizontal: Layout.spacing.lg.
+          // If sectionWrapper in dashboard.tsx provides .md, this might be inconsistent.
+          // Let's assume SectionHeader is fine or can be adjusted globally if needed.
         />
-        <View style={styles.listContainer}>
-          <Card style={[styles.emptyStateCard, { backgroundColor: cardBackgroundColor }]}>
-            <ThemedView style={styles.emptyStateContent}>
-              <Ionicons name="add-circle-outline" size={48} color={sectionTitleColor} style={styles.emptyStateIcon} />
-              <ThemedText style={[styles.emptyStateTitle, { color: sectionTitleColor }]}>
-                No Other Rooms
-              </ThemedText>
-              <ThemedText style={[styles.emptyStateMessage, { color: sectionTitleColor }]}>
-                Add more rooms to expand your monitoring coverage.
-              </ThemedText>
-            </ThemedView>
-          </Card>
-        </View>
+        {/* Empty state remains inside the section's padding */}
+        <Card style={[styles.emptyStateCard, { backgroundColor: cardBackgroundColor }]} paddingSize="xl">
+          <ThemedView style={styles.emptyStateContent}>
+            <Ionicons name="grid-outline" size={48} color={iconColor} style={styles.emptyStateIcon} />
+            <ThemedText style={[styles.emptyStateTitle, { color: sectionTitleColor }]}>
+              No Other Rooms
+            </ThemedText>
+            <ThemedText style={[styles.emptyStateMessage, { color: iconColor }]}>
+              All active rooms are shown in detail or add more rooms.
+            </ThemedText>
+          </ThemedView>
+        </Card>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-    <View style={styles.container}>
       <SectionHeader 
         title={title} 
         onPressViewAll={onPressViewAll} 
       />
-        {roomsData.map(room => (
-          <RoomCard
-            key={room.roomId}
-            room={room}
-            onPress={() => {
-              // Navigate to specific room detail
-              // router.push(`/(tabs)/rooms/${room.roomId}`);
-              onPressViewAll(); // For now, go to rooms list
-            }}
-          />
-        ))}
-      </View>
+      {/* The cards will respect the sectionWrapper's horizontal padding */}
+      {roomsData.map(room => (
+        <RoomCardDisplay // Renamed to avoid conflict if RoomCard is imported from elsewhere
+          key={room.roomId}
+          room={room}
+          onPress={() => {
+            // TODO: Implement navigation to specific room detail, e.g.,
+            // router.push(`/(tabs)/rooms/${room.roomId}`);
+            // For now, or if more appropriate for this section:
+            onPressViewAll(); 
+          }}
+        />
+      ))}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.md, // Use sectionWrapper's padding
+    // marginBottom is handled by spacers in dashboard.tsx or this component can add its own
+    // If this section is the last one, FlatList's contentContainerStyle in dashboard.tsx provides paddingBottom.
   },
-  listContainer: {
-    paddingHorizontal: Layout.spacing.md,
-    gap: Layout.spacing.sm,
+  // listContainer was removed as direct mapping is used.
+  // Each RoomCardDisplay will need its own margin if 'gap' is not used.
+  roomCardTouchable: {
+    marginBottom: Layout.spacing.md, // Add margin between cards
   },
   roomCard: {
     borderLeftWidth: 4,
-    borderWidth: 1,
-    borderRadius: Layout.borderRadius.lg,
-    overflow: 'hidden',
-    ...Layout.cardShadow,
+    // borderWidth: 1, // Card component adds a hairline border by default if not disabled
+    borderRadius: Layout.borderRadius.lg, // Card component handles this
+    // overflow: 'hidden', // Card might handle this or not needed
+    // ...Layout.cardShadow, // Card component handles shadow
   },
   roomCardContent: {
-    padding: Layout.spacing.md,
+    padding: Layout.spacing.md, // Card component handles padding via paddingSize prop, but this allows override
     backgroundColor: 'transparent',
   },
   roomHeader: {
@@ -216,14 +228,18 @@ const styles = StyleSheet.create({
     marginLeft: Layout.spacing.xs,
   },
   metricDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    marginHorizontal: Layout.spacing.md,
+    width: StyleSheet.hairlineWidth, // Use hairlineWidth for subtle dividers
+    height: '60%', // Make it relative to content
+    alignSelf: 'center',
+    // backgroundColor is set by useThemeColor -> borderColor
+    marginHorizontal: Layout.spacing.sm, // Reduced margin
   },
   emptyStateCard: {
-    paddingVertical: Layout.spacing.xl,
+    // paddingVertical: Layout.spacing.xl, // Card handles padding via paddingSize
+    // paddingSize: "xl", // This prop is passed directly to the Card component
     alignItems: 'center',
+    // No marginHorizontal, sectionWrapper in dashboard.tsx handles it.
+    marginTop: Layout.spacing.md, // Space from SectionHeader
   },
   emptyStateContent: {
     alignItems: 'center',

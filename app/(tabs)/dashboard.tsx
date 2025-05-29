@@ -93,32 +93,28 @@ export default function DashboardScreen() {
   ]);
 
   const renderDashboardSection = ({ item }: { item: DashboardSection }) => {
-    switch (item.type) {
-      case 'ROOM_DETAILS':
-        return <RoomDetailCard {...item.data} />;
-      case 'QUICK_ACTIONS_CAROUSEL':
-        return (
-          <View style={styles.sectionWrapper}>
-            <QuickActionsCarousel />
-          </View>
-        );
-      case 'RECENT_ALERTS_SECTION':
-        return (
-          <View style={styles.sectionWrapper}>
-            <RecentAlertsSection {...item.data} />
-          </View>
-        );
-      case 'OTHER_MONITORED_ROOMS_SECTION':
-        return (
-          <View style={styles.sectionWrapper}>
-            <OtherMonitoredRoomsSection {...item.data} />
-          </View>
-        );
-      case 'SPACER':
-        return <View style={{ height: item.height }} />;
-      default:
-        return null;
-    }
+    // Apply consistent horizontal padding to all major sections
+    // RoomDetailCard itself is substantial, so it also gets wrapped for consistent spacing.
+    // Spacers don't need this wrapper.
+
+    const content = () => {
+        switch (item.type) {
+            case 'ROOM_DETAILS':
+                return <RoomDetailCard {...item.data} />;
+            case 'QUICK_ACTIONS_CAROUSEL':
+                return <QuickActionsCarousel />;
+            case 'RECENT_ALERTS_SECTION':
+                return <RecentAlertsSection {...item.data} />;
+            case 'OTHER_MONITORED_ROOMS_SECTION':
+                return <OtherMonitoredRoomsSection {...item.data} />;
+            case 'SPACER':
+                return <View style={{ height: item.height }} />;
+            default:
+                return null;
+        }
+    };
+
+    return content();
   };
 
   return (
@@ -127,9 +123,9 @@ export default function DashboardScreen() {
         data={dashboardSections}
         renderItem={renderDashboardSection}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={<DashboardHeader currentTheme={currentTheme}/>}
+        ListHeaderComponent={<DashboardHeader currentTheme={currentTheme}/>} // Assuming DashboardHeader handles its own padding if needed
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.flatListContentContainer}
+        contentContainerStyle={styles.flatListContentContainer} // Overall padding for the list
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -147,9 +143,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   flatListContentContainer: {
-    paddingBottom: Layout.spacing.xl,
-  },
-  sectionWrapper: {
-    paddingHorizontal: Layout.spacing.md,
-  },
+    // Apply top padding here if DashboardHeader doesn't have its own bottom margin,
+    // or if a general top padding for the scrollable content is desired.
+    // For example: paddingTop: Layout.spacing.md,
+    paddingBottom: Layout.spacing.xl, // For scroll-past-content space
+  }
 });

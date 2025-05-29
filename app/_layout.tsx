@@ -1,36 +1,43 @@
 // labwatch-app/app/_layout.tsx
-import { getCommonHeaderOptions } from '@/constants/NavigationOptions'; // Import the new function
-import { useColorScheme } from '@/hooks/useColorScheme';
+import FloatingAssistantButton from '@/components/FloatingAssistantButton'; //
+import { getCommonHeaderOptions } from '@/constants/NavigationOptions'; //
+import { useColorScheme } from '@/hooks/useColorScheme'; //
 import {
   Montserrat_400Regular,
   Montserrat_500Medium,
   Montserrat_600SemiBold,
   Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'; // Ensure this import is correct
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import 'react-native-get-random-values'; // For uuid
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  console.log("Value of Ionicons.font:", Ionicons.font); // <-- DEBUG LINE
+
   const [loaded, error] = useFonts({
     'Montserrat-Regular': Montserrat_400Regular,
     'Montserrat-Medium': Montserrat_500Medium,
     'Montserrat-SemiBold': Montserrat_600SemiBold,
     'Montserrat-Bold': Montserrat_700Bold,
-    ...Ionicons.font,
+    ...(Ionicons.font || {}), // <-- Safeguard: spread an empty object if Ionicons.font is undefined
   });
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const commonOptions = getCommonHeaderOptions(colorScheme);
+  const colorScheme = useColorScheme() ?? 'light'; //
+  const commonOptions = getCommonHeaderOptions(colorScheme); //
 
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
+    }
+    if (error) {
+      console.error("Font loading error:", error); // <-- Log font errors
     }
   }, [loaded, error]);
 
@@ -43,23 +50,18 @@ export default function RootLayout() {
       <Stack screenOptions={commonOptions}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        {/* Auth stack is self-contained with its own layout, no specific options here unless overriding */}
         <Stack.Screen name="auth" options={{ headerShown: false }} />
-
-        {/* Modal Screens */}
         <Stack.Screen
           name="assistant"
           options={{
             title: 'AI Assistant',
             presentation: 'modal',
-            // Header styles will be inherited from commonOptions
           }}
         />
         <Stack.Screen
           name="profile"
           options={{
             title: 'User Profile',
-            // Header styles will be inherited
           }}
         />
         <Stack.Screen
@@ -67,7 +69,6 @@ export default function RootLayout() {
           options={{
             title: 'Add New Room',
             presentation: 'modal',
-            // Header styles will be inherited
           }}
         />
         <Stack.Screen
@@ -75,11 +76,11 @@ export default function RootLayout() {
           options={{
             title: 'Edit Room',
             presentation: 'modal',
-            // Header styles will be inherited
           }}
         />
         <Stack.Screen name="+not-found" options={{ title: 'Oops!'}} />
       </Stack>
+      <FloatingAssistantButton />
     </View>
   );
 }

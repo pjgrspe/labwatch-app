@@ -52,9 +52,9 @@ const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
       tempHumidity?.status,
       airQuality?.aqiLevel || airQuality?.status,
       vibrationData?.status
-    ].filter(Boolean) as string[];
+    ].filter(Boolean);
     
-    if (statuses.includes('critical') || statuses.includes('poor')) return 'critical';
+    if (statuses.includes('critical')) return 'critical';
     if (statuses.includes('warning') || statuses.includes('moderate')) return 'warning';
     return 'normal';
   };

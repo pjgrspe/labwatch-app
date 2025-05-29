@@ -1,3 +1,4 @@
+// labwatch-app/modules/dashboard/components/DashboardHeader.tsx
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { Colors, ColorScheme } from '@/constants/Colors';
 import Layout from '@/constants/Layout';
@@ -36,9 +37,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Mock weather data - in real app, you'd fetch from weather API
+  // Mock weather data
   useEffect(() => {
-    // Simulate weather data based on time of day
     const hour = currentTime.getHours();
     let mockWeather: WeatherData;
 
@@ -101,7 +101,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
   };
 
   const getUserName = () => {
-    // In a real app, you'd get this from user context/auth
     return 'Dr. Smith';
   };
 
@@ -156,12 +155,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
         {/* Status Indicator */}
         <ThemedView style={styles.statusBar}>
           <ThemedView style={styles.statusItem}>
-            <ThemedView style={styles.statusDot} />
+            <ThemedView style={[styles.statusDot, {backgroundColor: themeColors.successText }]} />
             <ThemedText style={styles.statusText}>System Online</ThemedText>
           </ThemedView>
           <ThemedView style={styles.statusDivider} />
           <ThemedView style={styles.statusItem}>
-            <Ionicons name="shield-checkmark" size={14} color="#FFFFFF" style={styles.statusIcon} />
+            <Ionicons name="shield-checkmark" size={14} color={themeColors.successText} style={styles.statusIcon} />
             <ThemedText style={styles.statusText}>Monitoring Active</ThemedText>
           </ThemedView>
         </ThemedView>
@@ -172,9 +171,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
 
 const styles = StyleSheet.create({
   headerGradient: {
-    paddingTop: Layout.spacing.xl,
+    paddingTop: Layout.spacing.xl, // Keep more top padding for visual hierarchy
     paddingBottom: Layout.spacing.lg,
-    paddingHorizontal: Layout.spacing.lg,
+    paddingHorizontal: Layout.spacing.md, // Changed from lg to md for consistency
+    // marginBottom: Layout.spacing.md, // Add margin to separate from content below if needed
   },
   headerContent: {
     backgroundColor: 'transparent',
@@ -272,38 +272,42 @@ const styles = StyleSheet.create({
   statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // This might need theme-specific adjustment
+                                                // For dark theme, a darker translucent bg might be better
+                                                // e.g., currentTheme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)'
     borderRadius: Layout.borderRadius.md,
     paddingVertical: Layout.spacing.sm,
     paddingHorizontal: Layout.spacing.md,
+    marginTop: Layout.spacing.sm, // Added margin top for better spacing
   },
   statusItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1, // Distribute space
+    justifyContent: 'center', // Center items within their flex area
     backgroundColor: 'transparent',
   },
-  statusDot: {
+  statusDot: { // Dynamic color based on theme.successText
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00FF88',
+    // backgroundColor will be set dynamically
     marginRight: Layout.spacing.xs,
   },
-  statusIcon: {
+  statusIcon: { // Dynamic color based on theme.successText
     marginRight: Layout.spacing.xs,
   },
   statusText: {
     fontSize: Layout.fontSize.xs,
     fontFamily: 'Montserrat-SemiBold',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // White text on the translucent status bar
     opacity: 0.9,
   },
   statusDivider: {
     width: 1,
     height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: Layout.spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)', // Similar to statusBar bg, this might need theme adjustment
+    marginHorizontal: Layout.spacing.sm, // Reduced from md for a tighter look
   },
 });
 
