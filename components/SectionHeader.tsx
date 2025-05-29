@@ -1,7 +1,7 @@
 // labwatch-app/components/SectionHeader.tsx
-import { Text as ThemedText } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ThemedText } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 

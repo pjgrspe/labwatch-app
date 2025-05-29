@@ -1,7 +1,7 @@
 // labwatch-app/app/auth/pending-approval.tsx
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { ThemedText, ThemedView } from '@/components';
 import { auth } from '@/FirebaseConfig';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks';
 import { AuthService } from '@/modules/auth/services/AuthService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -39,7 +39,7 @@ export default function PendingApprovalScreen() {
       try {
         const userProfile = await AuthService.getUserProfile(currentUser.uid);
         if (userProfile?.status === "approved") {
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/dashboard');
         } else if (userProfile?.status === "denied") {
           Alert.alert(
             "Account Denied",

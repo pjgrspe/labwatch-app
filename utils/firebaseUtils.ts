@@ -1,5 +1,10 @@
 // labwatch-app/utils/firebaseUtils.ts
-import { Timestamp } from 'firebase/firestore';
+import { db } from '@/FirebaseConfig'; // Ensure db is exported from your FirebaseConfig
+import { Alert } from '@/types/alerts'; // Import Alert type
+import { Incident, NewIncident, UpdateIncident } from '@/types/incidents'; // Adjust path if needed
+import { Room } from '@/types/rooms'; // Import Room type
+import { Timestamp, addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+
 
 export const convertTimestamps = (data: any): any => {
   if (data === null || typeof data !== 'object') {
@@ -18,4 +23,98 @@ export const convertTimestamps = (data: any): any => {
     }
   }
   return converted;
+};
+
+// --- Incident Functions ---
+
+const incidentsCollection = collection(db, 'incidents');
+
+export const addIncident = async (incidentData: NewIncident): Promise<string> => {
+  try {
+    const docRef = await addDoc(incidentsCollection, {
+      ...incidentData,
+      reportedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding incident: ", error);
+    throw error;
+  }
+};
+
+export const getIncidents = async (): Promise<Incident[]> => {
+  try {
+    const q = query(incidentsCollection, orderBy('reportedAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => convertTimestamps({ ...doc.data(), id: doc.id } as Incident));
+  } catch (error) {
+    console.error("Error getting incidents: ", error);
+    throw error;
+  }
+};
+
+export const getIncidentById = async (id: string): Promise<Incident | null> => {
+  try {
+    const docRef = doc(db, 'incidents', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return convertTimestamps({ ...docSnap.data(), id: docSnap.id } as Incident);
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting incident by ID: ", error);
+    throw error;
+  }
+};
+
+export const updateIncident = async (id: string, updates: UpdateIncident): Promise<void> => {
+  try {
+    const docRef = doc(db, 'incidents', id);
+    await updateDoc(docRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating incident: ", error);
+    throw error;
+  }
+};
+
+export const deleteIncident = async (id: string): Promise<void> => {
+  try {
+    const docRef = doc(db, 'incidents', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting incident: ", error);
+    throw error;
+  }
+};
+
+
+// --- Helper function to get rooms (you might already have this in RoomService) ---
+export const getRoomsForSelector = async (): Promise<Room[]> => {
+  try {
+    const roomsCollection = collection(db, 'rooms'); // Assuming 'rooms' is your collection name
+    const q = query(roomsCollection, where('isArchived', '!=', true), orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => convertTimestamps({ ...doc.data(), id: doc.id } as Room));
+  } catch (error) {
+    console.error("Error getting rooms: ", error);
+    throw error;
+  }
+};
+
+// --- Helper function to get alerts (you might already have this in AlertService) ---
+export const getAlertsForSelector = async (): Promise<Alert[]> => {
+  try {
+    const alertsCollection = collection(db, 'alerts'); // Assuming 'alerts' is your collection name
+    // Add any necessary filters, e.g., only non-acknowledged alerts or recent alerts
+    const q = query(alertsCollection, orderBy('timestamp', 'desc')); // Example query
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => convertTimestamps({ ...doc.data(), id: doc.id } as Alert));
+  } catch (error) {
+    console.error("Error getting alerts: ", error);
+    throw error;
+  }
 };

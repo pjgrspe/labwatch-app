@@ -1,9 +1,7 @@
 // Modified app/(tabs)/alerts/index.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { ColorName, Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { ColorName, Colors, Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { AlertService } from '@/modules/alerts/services/AlertService';
 import { Alert as AlertInterface, AlertSeverity, AlertType as AlertTypeStrings } from '@/types/alerts';
 import { Ionicons } from '@expo/vector-icons';

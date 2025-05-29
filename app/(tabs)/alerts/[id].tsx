@@ -1,10 +1,8 @@
 // app/(tabs)/alerts/[id].tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { ColorName } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { ColorName, Layout } from '@/constants';
 import { auth } from '@/FirebaseConfig';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { AlertService } from '@/modules/alerts/services/AlertService';
 import { AlertSeverity, Alert as AlertType } from '@/types/alerts';
 import { Ionicons } from '@expo/vector-icons';

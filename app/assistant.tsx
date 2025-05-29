@@ -1,9 +1,7 @@
 // labwatch-app/app/assistant.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { Colors, Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { useChat } from '@/modules/assistant/hooks/useChat';
 import { Message } from '@/types/assistant';
 import { Ionicons } from '@expo/vector-icons';

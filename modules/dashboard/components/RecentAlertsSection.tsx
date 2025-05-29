@@ -1,10 +1,7 @@
 // labwatch-app/modules/dashboard/components/RecentAlertsSection.tsx
-import Card from '@/components/Card';
-import SectionHeader from '@/components/SectionHeader';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { ColorName } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, SectionHeader, ThemedText, ThemedView } from '@/components';
+import { ColorName, Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { AlertSeverity, Alert as AlertType, AlertType as AlertTypeStrings } from '@/types/alerts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

@@ -1,8 +1,8 @@
 // labwatch-app/app/modals/edit-room.tsx
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { RoomService } from '@/modules/rooms/services/RoomService';
+import { ThemedText, ThemedView } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
+import { Rooms } from '@/modules';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -60,7 +60,7 @@ export default function EditRoomModal() {
       const fetchRoomData = async () => {
         setIsLoading(true);
         try {
-          const roomData = await RoomService.getRoomById(roomId);
+          const roomData = await Rooms.RoomService.getRoomById(roomId);
           if (roomData) {
             setRoomName(roomData.name);
             setLocation(roomData.location);
@@ -110,7 +110,7 @@ export default function EditRoomModal() {
         ...(selectedModule && { esp32ModuleId: selectedModule.id, esp32ModuleName: selectedModule.name })
       };
       
-      await RoomService.updateRoom(roomId, roomData);
+      await Rooms.RoomService.updateRoom(roomId, roomData);
       Alert.alert("Room Updated", `Room "${roomName}" has been successfully updated.`);
       router.back();
     } catch (error) {

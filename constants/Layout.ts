@@ -4,7 +4,7 @@ import { Dimensions } from 'react-native';
 const width = Dimensions.get('window').width;
 const height = Dimensions.get('window').height;
 
-export default {
+const Layout = {
   window: {
     width,
     height,
@@ -47,11 +47,13 @@ export default {
     shadowRadius: 12,    // More diffused
     elevation: 5,
   },
-  darkCardShadow: { // Subtle shadow for dark theme cards
-    shadowColor: '#000000', // Shadow color can remain black for dark themes too
+  darkCardShadow: { // Subtle shadow for dark theme cards    shadowColor: '#000000', // Shadow color can remain black for dark themes too
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2, // Dark mode shadows often need to be slightly more opaque to be visible on dark bgs
     shadowRadius: 8,
     elevation: 5, // Elevation can be similar or slightly less
   }
 };
+
+export { Layout };
+export default Layout;

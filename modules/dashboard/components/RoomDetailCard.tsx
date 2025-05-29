@@ -1,17 +1,15 @@
 // labwatch-app/modules/dashboard/components/RoomDetailCard.tsx
-import Card from '@/components/Card';
-import RoomSelectorDropdown from '@/components/dashboard/RoomSelectorDropdown';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
+import { Card, ThemedText, ThemedView } from '@/components';
 import DialGauge from '@/components/ui/DialGauge';
 import HeatmapGrid from '@/components/ui/HeatmapGrid';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Colors, Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { getStatusColorForDial } from '@/modules/dashboard/utils/colorHelpers';
 import { AirQualityData, TempHumidityData, ThermalImagerData, VibrationData } from '@/types/sensor';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import RoomSelectorDropdown from './RoomSelectorDropdown';
 
 interface RoomDetailCardProps {
   rooms: string[];

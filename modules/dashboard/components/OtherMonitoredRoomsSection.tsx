@@ -1,9 +1,7 @@
 // labwatch-app/modules/dashboard/components/OtherMonitoredRoomsSection.tsx
-import Card from '@/components/Card';
-import SectionHeader from '@/components/SectionHeader';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Card, SectionHeader, ThemedText, ThemedView } from '@/components';
+import { Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { TempHumidityData } from '@/types/sensor'; // Assuming this type includes 'name'
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';

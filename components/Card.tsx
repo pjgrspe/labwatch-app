@@ -1,6 +1,6 @@
 // labwatch-app/components/Card.tsx
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import React, { PropsWithChildren } from 'react';
 import { StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { View as ThemedView } from './Themed';

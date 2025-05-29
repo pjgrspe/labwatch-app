@@ -1,8 +1,8 @@
 // labwatch-app/app/modals/add-room.tsx
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { RoomService } from '@/modules/rooms/services/RoomService';
+import { ThemedText, ThemedView } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
+import { Rooms } from '@/modules';
 import { Ionicons } from '@expo/vector-icons'; // Added for header icon
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -69,7 +69,7 @@ export default function AddRoomModal() {
         ...(selectedModule && { esp32ModuleId: selectedModule.id, esp32ModuleName: selectedModule.name })
       };
       
-      await RoomService.addRoom(roomData);
+      await Rooms.RoomService.addRoom(roomData);
       Alert.alert(
         "Room Added",
         `Room "${roomName}" has been successfully added.`,

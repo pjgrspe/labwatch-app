@@ -1,9 +1,7 @@
 // labwatch-app/modules/rooms/components/RoomList.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { Colors, Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { Room } from '@/types/rooms';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

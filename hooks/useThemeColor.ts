@@ -1,5 +1,5 @@
 // labwatch-app/hooks/useThemeColor.ts
-import { ColorName, Colors, ColorScheme } from '@/constants/Colors'; // Assuming Colors.ts is updated
+import { ColorName, Colors, ColorScheme } from '@/constants';
 import { useColorScheme as useNativeColorScheme } from 'react-native'; // Renamed to avoid conflict
 
 export function useThemeColor(

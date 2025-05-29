@@ -1,7 +1,6 @@
 // labwatch-app/modules/dashboard/components/DashboardHeader.tsx
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { Colors, ColorScheme } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
+import { ThemedText, ThemedView } from '@/components';
+import { Colors, ColorScheme, Layout } from '@/constants';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';

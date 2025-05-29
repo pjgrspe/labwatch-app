@@ -1,7 +1,7 @@
 // labwatch-app/app/_layout.tsx
-import FloatingAssistantButton from '@/components/FloatingAssistantButton'; //
-import { getCommonHeaderOptions } from '@/constants/NavigationOptions'; //
-import { useColorScheme } from '@/hooks/useColorScheme'; //
+import { FloatingAssistantButton } from '@/components';
+import { getCommonHeaderOptions } from '@/constants';
+import { useColorScheme } from '@/hooks';
 import {
   Montserrat_400Regular,
   Montserrat_500Medium,
@@ -75,6 +75,20 @@ export default function RootLayout() {
           name="modals/edit-room"
           options={{
             title: 'Edit Room',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="modals/add-incident"
+          options={{
+            title: 'Add New Incident',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="modals/edit-incident"
+          options={{
+            title: 'Edit Incident',
             presentation: 'modal',
           }}
         />

@@ -1,7 +1,6 @@
 // app/(tabs)/dashboard.tsx
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Colors, Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';

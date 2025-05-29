@@ -1,6 +1,6 @@
 // labwatch-app/components/ListItem.tsx
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleProp, StyleSheet, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';

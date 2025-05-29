@@ -1,5 +1,5 @@
 // labwatch-app/modules/dashboard/utils/colorHelpers.ts
-import { Colors, ColorScheme } from '@/constants/Colors'; //
+import { Colors, ColorScheme } from '@/constants';
 import { AQILevel, TempHumidityData } from '@/types/sensor'; //
 
 export const getStatusColorForDial = (

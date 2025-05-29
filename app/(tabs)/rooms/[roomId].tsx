@@ -1,12 +1,10 @@
 // app/(tabs)/rooms/[roomId].tsx
-import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView, View } from '@/components/Themed';
+import { Card, ThemedText, ThemedView } from '@/components';
 import DialGauge from '@/components/ui/DialGauge';
 import HeatmapGrid from '@/components/ui/HeatmapGrid';
-import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout';
+import { Colors, Layout } from '@/constants';
 import { db } from '@/FirebaseConfig';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { getStatusColorForDial } from '@/modules/dashboard/utils/colorHelpers';
 import { RoomService, ROOMS_COLLECTION as roomsCollectionName } from '@/modules/rooms/services/RoomService';
 import { Room, RoomSensorData } from '@/types/rooms';
@@ -16,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function RoomDetailScreen() {
   const router = useRouter();

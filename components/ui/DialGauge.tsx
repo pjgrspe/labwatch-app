@@ -1,6 +1,6 @@
-import { Text as ThemedText } from '@/components/Themed';
-import Layout from '@/constants/Layout';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { ThemedText } from '@/components';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { getGaugeRangeForSensor } from '@/modules/alerts/services/AlertService';
 import { interpolateColor, polarToCartesian } from '@/utils/dialGauge';
 import React, { useEffect, useRef } from 'react';

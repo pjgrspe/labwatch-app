@@ -2,7 +2,7 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
-import { Text, View } from '@/components/Themed'; // Assuming Themed.tsx is in components
+import { ThemedText as Text, ThemedView as View } from '@/components';
 
 export default function NotFoundScreen() {
   return (

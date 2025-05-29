@@ -1,8 +1,6 @@
 // labwatch-app/app/profile.tsx
-import Card from '@/components/Card';
-import ListItem from '@/components/ListItem';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Card, ListItem, ThemedText, ThemedView } from '@/components';
+import { useThemeColor } from '@/hooks';
 import { Stack } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';

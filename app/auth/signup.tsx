@@ -1,7 +1,7 @@
 // app/auth/signup.tsx
-import { Text as ThemedText } from '@/components/Themed';
+import { ThemedText } from '@/components';
 import { app, auth } from '@/FirebaseConfig';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks';
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getFirestore, setDoc } from 'firebase/firestore'; // Added serverTimestamp

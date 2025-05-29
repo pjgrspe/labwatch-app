@@ -1,13 +1,12 @@
 // app/(tabs)/more/admin/manage-users.tsx
-import Card from '@/components/Card';
-import { Text as ThemedText } from '@/components/Themed';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { AuthService, UserProfile } from '@/modules/auth/services/AuthService';
+import { Card, ThemedText } from '@/components';
+import { useThemeColor } from '@/hooks';
+import { Auth } from '@/modules';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, View } from 'react-native';
 
 export default function ManageUsersScreen() {
-  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<Auth.UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -20,7 +19,7 @@ export default function ManageUsersScreen() {
   const fetchPendingUsers = async () => {
     setIsLoading(true);
     try {
-      const users = await AuthService.getPendingUsers();
+      const users = await Auth.AuthService.getPendingUsers();
       setPendingUsers(users);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch pending users.");
@@ -46,7 +45,7 @@ export default function ManageUsersScreen() {
           text: "Approve",
           onPress: async () => {
             try {
-              await AuthService.approveUser(uid);
+              await Auth.AuthService.approveUser(uid);
               Alert.alert("Success", "User approved.");
               fetchPendingUsers(); // Refresh list
             } catch (error: any) {
@@ -70,7 +69,7 @@ export default function ManageUsersScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await AuthService.denyUser(uid);
+              await Auth.AuthService.denyUser(uid);
               Alert.alert("Success", "User registration denied.");
               fetchPendingUsers(); // Refresh list
             } catch (error: any) {
@@ -106,7 +105,7 @@ export default function ManageUsersScreen() {
     }
   };
 
-  const renderUserItem = ({ item }: { item: UserProfile }) => (
+  const renderUserItem = ({ item }: { item: Auth.UserProfile }) => (
     <Card style={styles.userItemCard}>
         <ThemedText style={[styles.userName, {color: textColor}]}>
           {item.fullName || 'N/A'}

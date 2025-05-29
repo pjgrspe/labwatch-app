@@ -1,6 +1,6 @@
 // labwatch-app/components/FloatingAssistantButton.tsx
-import Layout from '@/constants/Layout'; // Import Layout
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { Layout } from '@/constants';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -9,8 +9,8 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 export default function FloatingAssistantButton() {
   const router = useRouter();
   const fabBackgroundColor = useThemeColor({}, 'tint');
-  // Assuming primaryCallToActionText is white or light enough for good contrast on tint
-  const fabIconColor = useThemeColor({}, 'primaryCallToActionText');
+  // Use explicit light/dark colors for good contrast on tint background
+  const fabIconColor = useThemeColor({light: '#FFFFFF', dark: '#FFFFFF'}, 'text');
   const theme = useCurrentTheme();
   const shadowStyle = theme === 'light' ? Layout.cardShadow : Layout.darkCardShadow;
 
