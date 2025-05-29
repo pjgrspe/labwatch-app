@@ -4,8 +4,8 @@ import { useThemeColor } from '@/hooks';
 import { Incident } from '@/types/incidents';
 import { deleteIncident, getIncidentById } from '@/utils/firebaseUtils';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 // Define severity colors based on your Colors.ts structure
@@ -21,6 +21,22 @@ const getSeverityColorName = (severity: Incident['severity']): ColorName => {
     case 'info':
       return 'infoText';
     default:
+      return 'text';
+  }
+};
+
+// Define status colors based on your Colors.ts structure
+const getStatusColorName = (status: string): ColorName => {
+  switch (status) {
+    case 'open': 
+      return 'errorText'; // Red for open issues
+    case 'in_progress': 
+      return 'warningText'; // Orange/yellow for in progress
+    case 'resolved': 
+      return 'successText'; // Green for resolved
+    case 'closed': 
+      return 'infoText'; // Blue for closed
+    default: 
       return 'text';
   }
 };
@@ -77,6 +93,12 @@ export default function IncidentDetailScreen() {
   const successSeverityColor = useThemeColor({}, 'successText');
   const infoSeverityColor = useThemeColor({}, 'infoText');
 
+  // Pre-fetch all potential status colors to maintain consistent hook ordering
+  const errorStatusColor = useThemeColor({}, 'errorText');
+  const warningStatusColor = useThemeColor({}, 'warningText');
+  const successStatusColor = useThemeColor({}, 'successText');
+  const infoStatusColor = useThemeColor({}, 'infoText');
+
   const fetchIncidentDetails = useCallback(async () => {
     if (!id) {
       setIsLoading(false);
@@ -93,9 +115,12 @@ export default function IncidentDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    fetchIncidentDetails();
-  }, [fetchIncidentDetails]);
+  // Replace the existing useEffect with useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      fetchIncidentDetails();
+    }, [fetchIncidentDetails])
+  );
 
   const handleDeleteIncident = () => {
     if (!incident) return;
@@ -137,8 +162,23 @@ export default function IncidentDetailScreen() {
     }
   };
 
+  // Get the status color based on the incident (if available)
+  const getStatusColorForIncident = (incident: Incident | null) => {
+    if (!incident) return textColor;
+    
+    switch (getStatusColorName(incident.status)) {
+      case 'errorText': return errorStatusColor;
+      case 'warningText': return warningStatusColor;
+      case 'successText': return successStatusColor;
+      case 'infoText': return infoStatusColor;
+      default: return textColor;
+    }
+  };
+
   // Determine the severity color
   const incidentSeverityColor = getSeverityColorForIncident(incident);
+  const incidentStatusColor = getStatusColorForIncident(incident);
+
 
   if (isLoading) {
     return (
@@ -205,11 +245,38 @@ export default function IncidentDetailScreen() {
                 </ThemedView>
               </ThemedView>
               
-              {/* Incident Title */}
+              {/* Incident Title with Action Icons */}
               <ThemedView style={styles.titleSection}>
-                <ThemedText style={[styles.incidentTitle, { color: textColor }]}>
-                  {incident.title}
-                </ThemedText>
+                <ThemedView style={styles.titleWithActions}>
+                  <ThemedText style={[styles.incidentTitle, { color: textColor }]}>
+                    {incident.title}
+                  </ThemedText>
+                  <ThemedView style={styles.titleActionButtons}>
+                    <TouchableOpacity
+                      style={[styles.titleActionButton, { backgroundColor: tintColor + '15' }]}
+                      onPress={() => router.push({ 
+                        pathname: "/modals/edit-incident", 
+                        params: { incidentId: incident.id } 
+                      })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="pencil-outline" size={20} color={tintColor} />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.titleActionButton, { backgroundColor: errorTextColor + '15' }]}
+                      onPress={handleDeleteIncident}
+                      disabled={isDeleting}
+                      activeOpacity={0.7}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator size="small" color={errorTextColor} />
+                      ) : (
+                        <Ionicons name="trash-outline" size={20} color={errorTextColor} />
+                      )}
+                    </TouchableOpacity>
+                  </ThemedView>
+                </ThemedView>
               </ThemedView>
 
               {/* Key Metrics */}
@@ -259,39 +326,6 @@ export default function IncidentDetailScreen() {
                     </ThemedView>
                   )}
                 </ThemedView>
-              </ThemedView>
-
-              {/* Action Buttons - Similar to room details */}
-              <ThemedView style={styles.actionButtonsContainer}>
-                <Link href={{ pathname: "/modals/edit-incident", params: { incidentId: incident.id } }} asChild>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: tintColor + '15', borderColor: tintColor }]}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="pencil-outline" size={18} color={tintColor} />
-                    <ThemedText style={[styles.actionButtonText, { color: tintColor }]}>
-                      Edit
-                    </ThemedText>
-                  </TouchableOpacity>
-                </Link>
-                
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: errorTextColor + '15', borderColor: errorTextColor }]}
-                  onPress={handleDeleteIncident}
-                  disabled={isDeleting}
-                  activeOpacity={0.7}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={errorTextColor} />
-                  ) : (
-                    <>
-                      <Ionicons name="trash-outline" size={18} color={errorTextColor} />
-                      <ThemedText style={[styles.actionButtonText, { color: errorTextColor }]}>
-                        Delete
-                      </ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
               </ThemedView>
             </ThemedView>
           </Card>
@@ -362,67 +396,98 @@ export default function IncidentDetailScreen() {
               <Ionicons name="information-circle-outline" size={20} color={sectionTitleColor} /> Technical Details
             </ThemedText>
             
-            <ThemedView style={styles.detailsGrid}>
-              <ThemedView style={styles.detailRow}>
-                <ThemedView style={styles.detailItem}>
-                  <ThemedView style={styles.detailHeader}>
-                    <Ionicons name="calendar-outline" size={18} color={metaTextColor} />
-                    <ThemedText style={[styles.detailLabel, { color: metaTextColor }]}>Date & Time</ThemedText>
-                  </ThemedView>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>
-                    {incident.reportedAt ? incident.reportedAt.toLocaleString() : 'N/A'}
-                  </ThemedText>
-                  <ThemedText style={[styles.detailSubvalue, { color: metaTextColor }]}>
-                    {incident.reportedAt ? formatTimeAgo(incident.reportedAt) : 'N/A'}
+            <ThemedView style={styles.technicalDetailsContainer}>
+              {/* Date & Time */}
+              <ThemedView style={styles.technicalDetailItem}>
+                <ThemedView style={styles.technicalDetailRow}>
+                  <Ionicons name="calendar-outline" size={16} color={metaTextColor} />
+                  <ThemedText style={[styles.technicalDetailLabel, { color: metaTextColor }]}>
+                    Date & Time
                   </ThemedText>
                 </ThemedView>
+                <ThemedText style={[styles.technicalDetailValue, { color: textColor }]}>
+                  {incident.reportedAt ? incident.reportedAt.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'N/A'}
+                </ThemedText>
               </ThemedView>
 
+              {/* Last Updated (only if different) */}
               {incident.updatedAt && incident.updatedAt.toString() !== incident.reportedAt?.toString() && (
-                <ThemedView style={styles.detailRow}>
-                  <ThemedView style={styles.detailItem}>
-                    <ThemedView style={styles.detailHeader}>
-                      <Ionicons name="refresh-outline" size={18} color={metaTextColor} />
-                      <ThemedText style={[styles.detailLabel, { color: metaTextColor }]}>Last Updated</ThemedText>
-                    </ThemedView>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>
-                      {incident.updatedAt.toLocaleString()}
-                    </ThemedText>
-                    <ThemedText style={[styles.detailSubvalue, { color: metaTextColor }]}>
-                      {formatTimeAgo(incident.updatedAt)}
+                <ThemedView style={styles.technicalDetailItem}>
+                  <ThemedView style={styles.technicalDetailRow}>
+                    <Ionicons name="refresh-outline" size={16} color={metaTextColor} />
+                    <ThemedText style={[styles.technicalDetailLabel, { color: metaTextColor }]}>
+                      Last Updated
                     </ThemedText>
                   </ThemedView>
+                  <ThemedText style={[styles.technicalDetailValue, { color: textColor }]}>
+                    {incident.updatedAt.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </ThemedText>
                 </ThemedView>
               )}
 
-              <ThemedView style={styles.detailRow}>
-                <ThemedView style={styles.detailItem}>
-                  <ThemedView style={styles.detailHeader}>
-                    <Ionicons name="alert-outline" size={18} color={metaTextColor} />
-                    <ThemedText style={[styles.detailLabel, { color: metaTextColor }]}>Incident Status</ThemedText>
-                  </ThemedView>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>
-                    {incident.status.replace('_', ' ').toUpperCase()}
+              {/* Status & Severity */}
+              <ThemedView style={styles.technicalDetailItem}>
+                <ThemedView style={styles.technicalDetailRow}>
+                  <Ionicons name={getStatusIcon(incident.status)} size={16} color={metaTextColor} />
+                  <ThemedText style={[styles.technicalDetailLabel, { color: metaTextColor }]}>
+                    Status & Severity
                   </ThemedText>
-                  <ThemedText style={[styles.detailSubvalue, { color: metaTextColor }]}>
-                    {incident.severity.toUpperCase()} severity level
+                </ThemedView>
+                <ThemedView style={styles.technicalDetailBadges}>
+                  <ThemedText style={[styles.technicalDetailBadge, { 
+                    color: incidentSeverityColor,
+                    backgroundColor: `${incidentSeverityColor}15`
+                  }]}>
+                    {incident.severity.toUpperCase()}
+                  </ThemedText>
+                  <ThemedText style={[styles.technicalDetailBadge, { 
+                    color: incidentStatusColor,
+                    backgroundColor: `${incidentStatusColor}15`
+                  }]}>
+                    {incident.status.replace('_', ' ').toUpperCase()}
                   </ThemedText>
                 </ThemedView>
               </ThemedView>
 
-              <ThemedView style={styles.detailRow}>
-                <ThemedView style={styles.detailItem}>
-                  <ThemedView style={styles.detailHeader}>
-                    <Ionicons name="location-outline" size={18} color={metaTextColor} />
-                    <ThemedText style={[styles.detailLabel, { color: metaTextColor }]}>Location</ThemedText>
-                  </ThemedView>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>
-                    {incident.roomName || incident.roomId}
-                  </ThemedText>
-                  <ThemedText style={[styles.detailSubvalue, { color: metaTextColor }]}>
-                    Laboratory Environment
+              {/* Location */}
+              <ThemedView style={styles.technicalDetailItem}>
+                <ThemedView style={styles.technicalDetailRow}>
+                  <Ionicons name="location-outline" size={16} color={metaTextColor} />
+                  <ThemedText style={[styles.technicalDetailLabel, { color: metaTextColor }]}>
+                    Location
                   </ThemedText>
                 </ThemedView>
+                <ThemedText style={[styles.technicalDetailValue, { color: textColor }]}>
+                  {incident.roomName || incident.roomId}
+                </ThemedText>
+              </ThemedView>
+
+              {/* Incident ID */}
+              <ThemedView style={styles.technicalDetailItem}>
+                <ThemedView style={styles.technicalDetailRow}>
+                  <Ionicons name="finger-print-outline" size={16} color={metaTextColor} />
+                  <ThemedText style={[styles.technicalDetailLabel, { color: metaTextColor }]}>
+                    Incident ID
+                  </ThemedText>
+                </ThemedView>
+                <ThemedText style={[styles.technicalDetailCode, { 
+                  color: textColor,
+                  backgroundColor: `${surfaceColor}10`
+                }]}>
+                  {incident.id}
+                </ThemedText>
               </ThemedView>
             </ThemedView>
           </Card>
@@ -498,12 +563,34 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.lg,
     backgroundColor: 'transparent',
   },
+  titleWithActions: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+  },
   incidentTitle: {
+    flex: 1,
     fontSize: Layout.fontSize.xxl,
     fontFamily: 'Montserrat-Bold',
     marginBottom: Layout.spacing.xs,
     lineHeight: Layout.fontSize.xxl * 1.2,
+    paddingRight: Layout.spacing.sm,
   },
+  titleActionButtons: {
+    flexDirection: 'row',
+    gap: Layout.spacing.xs,
+    backgroundColor: 'transparent',
+    marginTop: 4, // Add slight margin to align with title
+  },
+  titleActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   
   // Metrics Styles
   metricsContainer: {
@@ -623,38 +710,49 @@ const styles = StyleSheet.create({
     lineHeight: Layout.fontSize.md * 1.4,
   },
   
-  // Details Grid Styles
-  detailsGrid: {
+  // Minimalistic Technical Details Styles
+  technicalDetailsContainer: {
     gap: Layout.spacing.lg,
     backgroundColor: 'transparent',
   },
-  detailRow: {
+  technicalDetailItem: {
     backgroundColor: 'transparent',
   },
-  detailItem: {
-    backgroundColor: 'transparent',
-  },
-  detailHeader: {
+  technicalDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Layout.spacing.xs,
+    gap: Layout.spacing.sm,
     marginBottom: Layout.spacing.sm,
     backgroundColor: 'transparent',
   },
-  detailLabel: {
+  technicalDetailLabel: {
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  detailValue: {
+  technicalDetailValue: {
     fontSize: Layout.fontSize.lg,
     fontFamily: 'Montserrat-SemiBold',
-    marginBottom: Layout.spacing.xs,
   },
-  detailSubvalue: {
+  technicalDetailCode: {
     fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Regular',
+    fontFamily: 'Monaco, Consolas, monospace',
+    padding: Layout.spacing.sm,
+    borderRadius: Layout.borderRadius.sm,
+  },
+  technicalDetailBadges: {
+    flexDirection: 'row',
+    gap: Layout.spacing.sm,
+    backgroundColor: 'transparent',
+  },
+  technicalDetailBadge: {
+    fontSize: Layout.fontSize.xs,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 0.5,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.borderRadius.sm,
   },
   
   // Legacy styles for compatibility

@@ -11,7 +11,9 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   SafeAreaView, // Changed from ThemedView for consistency
   ScrollView,
   StyleSheet,
@@ -108,14 +110,20 @@ export default function AddRoomModal() {
       <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.type}</ThemedText>
     </TouchableOpacity>
   );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Room Information Section */}
         <ThemedView style={[styles.section]}>
           <ThemedView style={styles.sectionHeader}>
@@ -207,8 +215,7 @@ export default function AddRoomModal() {
               onValueChange={setIsMonitored}
               value={isMonitored}
             />
-          </ThemedView>
-        </ThemedView>
+          </ThemedView>        </ThemedView>
       </ScrollView>
 
       {/* Bottom Action */}
@@ -229,6 +236,7 @@ export default function AddRoomModal() {
           </TouchableOpacity>
         )}
       </ThemedView>
+      </KeyboardAvoidingView>
 
       {/* Module Selection Modal */}
       <Modal
@@ -274,6 +282,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   // Header
   header: {
     flexDirection: 'row',
@@ -299,10 +310,10 @@ const styles = StyleSheet.create({
   // Content
   content: {
     flex: 1,
-  },
-  contentContainer: {
+  },  contentContainer: {
     padding: Layout.spacing.lg,
-    gap: Layout.spacing.xl, 
+    gap: Layout.spacing.xl,
+    paddingBottom: Layout.spacing.lg + 30, // Extra padding for keyboard
   },
   
   // Sections

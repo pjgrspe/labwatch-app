@@ -169,9 +169,24 @@ export default function AlertDetailScreen() {
       setIsAcknowledging(false);
     }
   };
-
   const handleCreateIncident = () => {
-    RNAlert.alert("Create Incident", "This will create an incident report based on this alert.");
+    if (!alert) return;
+    
+    // Navigate to add incident modal with alert data as parameters
+    router.push({
+      pathname: "/modals/add-incident",
+      params: {
+        alertId: alert.id,
+        alertType: alert.type,
+        alertMessage: alert.message,
+        alertSeverity: alert.severity,
+        roomId: alert.roomId,
+        roomName: alert.roomName,
+        triggeringValue: alert.triggeringValue?.toString() || '',
+        sensorType: alert.sensorType || '',
+        timestamp: alert.timestamp.toISOString(),
+      }
+    });
   };
 
   const handleCallEmergency = () => {

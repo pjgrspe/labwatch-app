@@ -12,7 +12,9 @@ import {
     ActivityIndicator,
     Dimensions,
     FlatList,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Alert as RNAlert,
     ScrollView,
     StyleSheet,
@@ -47,10 +49,10 @@ export default function EditIncidentModal() {
   const [description, setDescription] = useState('');
   const [alertId, setAlertId] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<Incident['status']>('open');
-  const [severity, setSeverity] = useState<Incident['severity']>('low');
-  const [actionsTaken, setActionsTaken] = useState<string[]>([]);
+  const [severity, setSeverity] = useState<Incident['severity']>('low');  const [actionsTaken, setActionsTaken] = useState<string[]>([]);
   const [currentAction, setCurrentAction] = useState('');
   const [resolutionDetails, setResolutionDetails] = useState('');
+  const [aiSuggestion, setAiSuggestion] = useState('');
 
   // Selected display objects
   const [selectedAlert, setSelectedAlert] = useState<AlertType | null>(null);
@@ -134,10 +136,10 @@ export default function EditIncidentModal() {
         setTitle(fetchedIncident.title);
         setDescription(fetchedIncident.description);
         setAlertId(fetchedIncident.alertId || undefined);
-        setStatus(fetchedIncident.status);
-        setSeverity(fetchedIncident.severity);
+        setStatus(fetchedIncident.status);        setSeverity(fetchedIncident.severity);
         setActionsTaken(fetchedIncident.actionsTaken || []);
         setResolutionDetails(fetchedIncident.resolutionDetails || '');
+        setAiSuggestion(fetchedIncident.aiSuggestion || '');
 
         // Set selected items for dropdowns
         setSelectedStatus(STATUS_OPTIONS.find(s => s.id === fetchedIncident.status) || null);
@@ -194,10 +196,10 @@ export default function EditIncidentModal() {
         title,
         description,
         alertId: alertId || undefined, // Use undefined instead of null to match the type
-        status,
-        severity,
+        status,        severity,
         actionsTaken: actionsTaken.length > 0 ? actionsTaken : undefined, // Use undefined instead of null
         resolutionDetails: resolutionDetails.trim() || undefined, // Use undefined instead of null
+        aiSuggestion: aiSuggestion.trim() || undefined, // Add AI suggestion field
       };
 
       await updateIncident(incident.id, incidentUpdates);
@@ -234,234 +236,261 @@ export default function EditIncidentModal() {
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
       <Stack.Screen options={{ title: 'Edit Incident' }} />
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
-        {/* Incident Information Section */}
-        <ThemedView style={[styles.section]}>
-          <ThemedView style={styles.sectionHeader}>
-            <Ionicons name="information-circle-outline" size={20} color={tintColor} />
-            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Incident Details</ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Title</ThemedText>
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
-              value={title}
-              onChangeText={setTitle}
-              placeholderTextColor={placeholderTextColor}
-            />
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Description</ThemedText>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
-              value={description}
-              onChangeText={setDescription}
-              placeholderTextColor={placeholderTextColor}
-              multiline
-              numberOfLines={4}
-            />
-          </ThemedView>
-        </ThemedView>
-
-        {/* Association Section */}
-        <ThemedView style={[styles.section]}>
-          <ThemedView style={styles.sectionHeader}>
-            <Ionicons name="link-outline" size={20} color={tintColor} />
-            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Associations</ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Room (Cannot be changed)</ThemedText>
-            <ThemedView style={[styles.infoBox, { backgroundColor: inputBackgroundColor, borderColor }]}>
-              <ThemedText style={[styles.infoText, {color: textColor}]}>
-                {incident.roomName || incident.roomId}
-              </ThemedText>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          {/* Incident Information Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Incident Details</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Title</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+                value={title}
+                onChangeText={setTitle}
+                placeholderTextColor={placeholderTextColor}
+              />
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Description</ThemedText>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+                value={description}
+                onChangeText={setDescription}
+                placeholderTextColor={placeholderTextColor}
+                multiline
+                numberOfLines={4}
+              />
             </ThemedView>
           </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Related Alert (Optional)</ThemedText>
-            <TouchableOpacity
-              style={[styles.dropdown, { 
-                backgroundColor: inputBackgroundColor, 
-                borderColor: borderColor 
-              }]}
-              onPress={() => setShowAlertDropdown(true)}
-            >
-              {selectedAlert ? (
-                <ThemedView style={styles.selectedModuleContent}>
-                  <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
-                    {selectedAlert.type}
-                  </ThemedText>
-                  <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
-                    {new Date(selectedAlert.timestamp).toLocaleString()}
-                  </ThemedText>
-                </ThemedView>
-              ) : (
-                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                  Select Related Alert (Optional)
-                </ThemedText>
-              )}
-              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
 
-        {/* Status & Severity Section */}
-        <ThemedView style={[styles.section]}>
-          <ThemedView style={styles.sectionHeader}>
-            <Ionicons name="options-outline" size={20} color={tintColor} />
-            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Status & Severity</ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Status</ThemedText>
-            <TouchableOpacity
-              style={[styles.dropdown, { 
-                backgroundColor: inputBackgroundColor, 
-                borderColor: borderColor 
-              }]}
-              onPress={() => setShowStatusDropdown(true)}
-            >
-              {selectedStatus ? (
-                <ThemedView style={styles.selectedModuleContent}>
-                  <ThemedView style={styles.selectedWithIcon}>
-                    <Ionicons 
-                      name={selectedStatus.icon as keyof typeof Ionicons.glyphMap} 
-                      size={22} 
-                      color={getStatusColor(selectedStatus.id)} 
-                      style={styles.moduleIcon} 
-                    />
+          {/* Association Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="link-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Associations</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Room (Cannot be changed)</ThemedText>
+              <ThemedView style={[styles.infoBox, { backgroundColor: inputBackgroundColor, borderColor }]}>
+                <ThemedText style={[styles.infoText, {color: textColor}]}>
+                  {incident.roomName || incident.roomId}
+                </ThemedText>
+              </ThemedView>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Related Alert (Optional)</ThemedText>
+              <TouchableOpacity
+                style={[styles.dropdown, { 
+                  backgroundColor: inputBackgroundColor, 
+                  borderColor: borderColor 
+                }]}
+                onPress={() => setShowAlertDropdown(true)}
+              >
+                {selectedAlert ? (
+                  <ThemedView style={styles.selectedModuleContent}>
                     <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
-                      {selectedStatus.name}
+                      {selectedAlert.type}
+                    </ThemedText>
+                    <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
+                      {new Date(selectedAlert.timestamp).toLocaleString()}
                     </ThemedText>
                   </ThemedView>
-                  <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
-                    {selectedStatus.description}
+                ) : (
+                  <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                    Select Related Alert (Optional)
                   </ThemedText>
-                </ThemedView>
-              ) : (
-                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                  Select Status
-                </ThemedText>
-              )}
-              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
-            </TouchableOpacity>
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Severity</ThemedText>
-            <TouchableOpacity
-              style={[styles.dropdown, { 
-                backgroundColor: inputBackgroundColor, 
-                borderColor: borderColor 
-              }]}
-              onPress={() => setShowSeverityDropdown(true)}
-            >
-              {selectedSeverity ? (
-                <ThemedView style={styles.selectedModuleContent}>
-                  <ThemedView style={styles.selectedWithIcon}>
-                    <Ionicons 
-                      name={selectedSeverity.icon as keyof typeof Ionicons.glyphMap} 
-                      size={22} 
-                      color={getSeverityColor(selectedSeverity.id)} 
-                      style={styles.moduleIcon} 
-                    />
-                    <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
-                      {selectedSeverity.name}
-                    </ThemedText>
-                  </ThemedView>
-                  <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
-                    {selectedSeverity.description}
-                  </ThemedText>
-                </ThemedView>
-              ) : (
-                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                  Select Severity
-                </ThemedText>
-              )}
-              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
-
-        {/* Actions Taken Section */}
-        <ThemedView style={[styles.section]}>
-          <ThemedView style={styles.sectionHeader}>
-            <Ionicons name="construct-outline" size={20} color={tintColor} />
-            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Actions Taken</ThemedText>
-          </ThemedView>
-          
-          {actionsTaken.map((action, index) => (
-            <ThemedView key={index} style={[styles.actionItemContainer, {borderColor}]}>
-              <ThemedText style={[styles.actionText, {color: textColor}]}>{action}</ThemedText>
-              <TouchableOpacity onPress={() => handleRemoveAction(index)}>
-                <Ionicons name="trash-bin-outline" size={20} color={errorTextColor} />
+                )}
+                <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
               </TouchableOpacity>
             </ThemedView>
-          ))}
-          
-          <ThemedView style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.actionInput, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
-              placeholder="Describe an action taken"
-              value={currentAction}
-              onChangeText={setCurrentAction}
-              placeholderTextColor={placeholderTextColor}
-            />
-            <TouchableOpacity style={[styles.addButtonSmall, {backgroundColor: tintColor}]} onPress={handleAddAction}>
-              <Ionicons name="add-outline" size={20} color={primaryButtonTextColor} />
+          </ThemedView>
+
+          {/* Status & Severity Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="options-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Status & Severity</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Status</ThemedText>
+              <TouchableOpacity
+                style={[styles.dropdown, { 
+                  backgroundColor: inputBackgroundColor, 
+                  borderColor: borderColor 
+                }]}
+                onPress={() => setShowStatusDropdown(true)}
+              >
+                {selectedStatus ? (
+                  <ThemedView style={styles.selectedModuleContent}>
+                    <ThemedView style={styles.selectedWithIcon}>
+                      <Ionicons 
+                        name={selectedStatus.icon as keyof typeof Ionicons.glyphMap} 
+                        size={22} 
+                        color={getStatusColor(selectedStatus.id)} 
+                        style={styles.moduleIcon} 
+                      />
+                      <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
+                        {selectedStatus.name}
+                      </ThemedText>
+                    </ThemedView>
+                    <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
+                      {selectedStatus.description}
+                    </ThemedText>
+                  </ThemedView>
+                ) : (
+                  <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                    Select Status
+                  </ThemedText>
+                )}
+                <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+              </TouchableOpacity>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Severity</ThemedText>
+              <TouchableOpacity
+                style={[styles.dropdown, { 
+                  backgroundColor: inputBackgroundColor, 
+                  borderColor: borderColor 
+                }]}
+                onPress={() => setShowSeverityDropdown(true)}
+              >
+                {selectedSeverity ? (
+                  <ThemedView style={styles.selectedModuleContent}>
+                    <ThemedView style={styles.selectedWithIcon}>
+                      <Ionicons 
+                        name={selectedSeverity.icon as keyof typeof Ionicons.glyphMap} 
+                        size={22} 
+                        color={getSeverityColor(selectedSeverity.id)} 
+                        style={styles.moduleIcon} 
+                      />
+                      <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
+                        {selectedSeverity.name}
+                      </ThemedText>
+                    </ThemedView>
+                    <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
+                      {selectedSeverity.description}
+                    </ThemedText>
+                  </ThemedView>
+                ) : (
+                  <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                    Select Severity
+                  </ThemedText>
+                )}
+                <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
+
+          {/* Actions Taken Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="construct-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Actions Taken</ThemedText>
+            </ThemedView>
+            
+            {actionsTaken.map((action, index) => (
+              <ThemedView key={index} style={[styles.actionItemContainer, {borderColor}]}>
+                <ThemedText style={[styles.actionText, {color: textColor}]}>{action}</ThemedText>
+                <TouchableOpacity onPress={() => handleRemoveAction(index)}>
+                  <Ionicons name="trash-bin-outline" size={20} color={errorTextColor} />
+                </TouchableOpacity>
+              </ThemedView>
+            ))}
+            
+            <ThemedView style={styles.inputRow}>
+              <TextInput
+                style={[styles.input, styles.actionInput, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+                placeholder="Describe an action taken"
+                value={currentAction}
+                onChangeText={setCurrentAction}
+                placeholderTextColor={placeholderTextColor}
+              />
+              <TouchableOpacity style={[styles.addButtonSmall, {backgroundColor: tintColor}]} onPress={handleAddAction}>
+                <Ionicons name="add-outline" size={20} color={primaryButtonTextColor} />
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
+
+          {/* Resolution Details Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Resolution Details (Optional)</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>Resolution</ThemedText>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+                placeholder="Describe how the incident was resolved..."
+                value={resolutionDetails}
+                onChangeText={setResolutionDetails}
+                placeholderTextColor={placeholderTextColor}
+                multiline
+                numberOfLines={3}
+              />            </ThemedView>
+          </ThemedView>
+
+          {/* AI Suggestion Section */}
+          <ThemedView style={[styles.section]}>
+            <ThemedView style={styles.sectionHeader}>
+              <Ionicons name="sparkles-outline" size={20} color={tintColor} />
+              <ThemedText style={[styles.sectionTitle, { color: textColor }]}>AI Suggestion (Optional)</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.inputGroup}>
+              <ThemedText style={[styles.inputLabel, { color: textColor }]}>AI Response Suggestion</ThemedText>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+                placeholder="AI-generated suggestions can be edited here..."
+                value={aiSuggestion}
+                onChangeText={setAiSuggestion}
+                placeholderTextColor={placeholderTextColor}
+                multiline
+                numberOfLines={4}
+              />
+            </ThemedView>
+          </ThemedView>
+        </ScrollView>
+
+        {/* Bottom Action */}
+        <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
+          {isLoading ? (
+            <ThemedView style={styles.loadingButton}>
+              <ActivityIndicator size="small" color={tintColor} />
+              <ThemedText style={[styles.loadingButtonText, { color: placeholderTextColor }]}>
+                Updating Incident...
+              </ThemedText>
+            </ThemedView>
+          ) : (
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: tintColor }]}
+              onPress={handleUpdateIncident}
+            >
+              <ThemedText style={styles.primaryButtonText}>Save Changes</ThemedText>
             </TouchableOpacity>
-          </ThemedView>
+          )}
         </ThemedView>
-
-        {/* Resolution Details Section */}
-        <ThemedView style={[styles.section]}>
-          <ThemedView style={styles.sectionHeader}>
-            <Ionicons name="checkmark-done-circle-outline" size={20} color={tintColor} />
-            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Resolution Details (Optional)</ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Resolution</ThemedText>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
-              placeholder="Describe how the incident was resolved..."
-              value={resolutionDetails}
-              onChangeText={setResolutionDetails}
-              placeholderTextColor={placeholderTextColor}
-              multiline
-              numberOfLines={3}
-            />
-          </ThemedView>
-        </ThemedView>
-      </ScrollView>
-
-      {/* Bottom Action */}
-      <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-        {isLoading ? (
-          <ThemedView style={styles.loadingButton}>
-            <ActivityIndicator size="small" color={tintColor} />
-            <ThemedText style={[styles.loadingButtonText, { color: placeholderTextColor }]}>
-              Updating Incident...
-            </ThemedText>
-          </ThemedView>
-        ) : (
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: tintColor }]}
-            onPress={handleUpdateIncident}
-          >
-            <ThemedText style={styles.primaryButtonText}>Save Changes</ThemedText>
-          </TouchableOpacity>
-        )}
-      </ThemedView>
+      </KeyboardAvoidingView>
 
       {/* Alert Selection Modal */}
       <Modal
@@ -651,12 +680,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: Layout.spacing.lg,
     gap: Layout.spacing.xl,
+    paddingBottom: Layout.spacing.xl, // Extra padding at bottom for keyboard
   },
   
   // Sections

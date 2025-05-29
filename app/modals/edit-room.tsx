@@ -11,7 +11,9 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -156,14 +158,20 @@ export default function EditRoomModal() {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Room Information Section */}
         <ThemedView style={[styles.section]}>
           <ThemedView style={styles.sectionHeader}>
@@ -255,8 +263,7 @@ export default function EditRoomModal() {
               onValueChange={setIsMonitored}
               value={isMonitored}
             />
-          </ThemedView>
-        </ThemedView>
+          </ThemedView>        </ThemedView>
       </ScrollView>
 
       {/* Bottom Action */}
@@ -277,6 +284,7 @@ export default function EditRoomModal() {
           </TouchableOpacity>
         )}
       </ThemedView>
+      </KeyboardAvoidingView>
 
       {/* Module Selection Modal */}
       <Modal
@@ -321,6 +329,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   loadingView: {
     flex: 1,
     justifyContent: 'center',
@@ -357,10 +368,10 @@ const styles = StyleSheet.create({
   // Content
   content: {
     flex: 1,
-  },
-  contentContainer: {
+  },  contentContainer: {
     padding: Layout.spacing.lg,
     gap: Layout.spacing.xl, // Space between sections
+    paddingBottom: Layout.spacing.lg + 30, // Extra padding for keyboard
   },
   
   // Sections
