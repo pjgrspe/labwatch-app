@@ -113,14 +113,12 @@ const FilterChip: React.FC<{
   showSortDirection?: boolean;
   sortDirection?: SortDirection;
 }> = React.memo(({ label, icon, isActive, onPress, showBadge, badgeCount, showSortDirection, sortDirection }) => {
-  // Call hooks at the top level
   const activeColor = useThemeColor({}, 'tint');
   const inactiveColor = useThemeColor({}, 'icon');
   const activeBackgroundColor = useThemeColor({light: Colors.light.tint + '15', dark: Colors.dark.tint + '20'}, 'background');
   const inactiveBackgroundColor = useThemeColor({light: Colors.light.surfaceSecondary, dark: Colors.dark.surfaceSecondary}, 'surfaceSecondary');
   const borderColor = useThemeColor({}, 'borderColor');
 
-  // Now memoize the colors object
   const colors = useMemo(() => ({
     activeColor,
     inactiveColor,
@@ -193,7 +191,6 @@ const AlertItem: React.FC<{
 }> = React.memo(({ item, isLastItemInSection, sortConfig }) => {
   const router = useRouter();
   
-  // Call hooks at the top level
   const itemSeverityColor = useThemeColor({}, severityThemeColors[item.severity] || 'text');
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const titleColor = useThemeColor({}, 'text');
@@ -201,7 +198,6 @@ const AlertItem: React.FC<{
   const acknowledgedColor = useThemeColor({}, 'successText');
   const borderColor = useThemeColor({}, 'borderColor');
 
-  // Memoize color calculations
   const colors = useMemo(() => ({
     itemSeverityColor,
     cardBackgroundColor,
@@ -211,7 +207,6 @@ const AlertItem: React.FC<{
     borderColor,
   }), [itemSeverityColor, cardBackgroundColor, titleColor, detailColor, acknowledgedColor, borderColor]);
 
-  // Memoize date calculations
   const dateInfo = useMemo(() => {
     const timestamp = item.timestamp instanceof Date
       ? item.timestamp
@@ -234,10 +229,8 @@ const AlertItem: React.FC<{
     };
   }, [item.timestamp, item.acknowledgedAt]);
 
-  // Memoize icon
   const alertIcon = useMemo(() => getIconForAlertType(item.type), [item.type]);
 
-  // Memoize press handler
   const handlePress = useCallback(() => {
     router.push(`/(tabs)/alerts/${item.id}` as any);
   }, [item.id, router]);
@@ -327,7 +320,6 @@ const AlertItem: React.FC<{
     </TouchableOpacity>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function for memo
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.item.acknowledged === nextProps.item.acknowledged &&
@@ -363,7 +355,6 @@ export default function AlertsListScreen() {
     icon: defaultSortIcon,
   });
 
-  // Theme colors
   const containerBackgroundColor = useThemeColor({}, 'background');
   const activityIndicatorColor = useThemeColor({}, 'tint');
   const emptyStateTextColor = useThemeColor({}, 'text');
@@ -377,20 +368,18 @@ export default function AlertsListScreen() {
   const headerBackgroundColor = useThemeColor({}, 'cardBackground');
   const filterButtonBackgroundColor = useThemeColor({light: Colors.light.surfaceSecondary, dark: Colors.dark.surfaceSecondary}, 'surfaceSecondary');
 
-  // Alert counts for badges
   const alertCounts = useMemo(() => {
-    const active = allAlerts.filter(alert => !alert.acknowledged).length;
-    const acknowledged = allAlerts.filter(alert => alert.acknowledged).length;
-    const critical = allAlerts.filter(alert => alert.severity === 'critical' && !alert.acknowledged).length;
-    const high = allAlerts.filter(alert => alert.severity === 'high' && !alert.acknowledged).length;
+    const safeAllAlerts = allAlerts || []; // Guard against null
+    const active = safeAllAlerts.filter(alert => !alert.acknowledged).length;
+    const acknowledged = safeAllAlerts.filter(alert => alert.acknowledged).length;
+    const critical = safeAllAlerts.filter(alert => alert.severity === 'critical' && !alert.acknowledged).length;
+    const high = safeAllAlerts.filter(alert => alert.severity === 'high' && !alert.acknowledged).length;
     
-    return { active, acknowledged, critical, high, total: allAlerts.length };
+    return { active, acknowledged, critical, high, total: safeAllAlerts.length };
   }, [allAlerts]);
 
-  // Check if any filters are applied
   const hasActiveFilters = filterStatus !== 'all' || sortConfig.option !== defaultSortOption || sortConfig.direction !== defaultSortDirection;
 
-  // Toggle filter panel with animation
   const toggleFilters = () => {
     const toValue = isFiltersExpanded ? 0 : 1;
     setIsFiltersExpanded(!isFiltersExpanded);
@@ -402,35 +391,19 @@ export default function AlertsListScreen() {
     }).start();
   };
 
-  const fetchAlerts = async (isRefresh = false) => {
-    if (!isRefresh) setIsLoading(true);
-    else setRefreshing(true);
-    try {
-      const fetchedAlerts = await AlertService.getAlerts();
-      setAllAlerts(fetchedAlerts);
-      applyFilters(fetchedAlerts, searchTerm, filterStatus);
-    } catch (error) {
-      console.error("Failed to fetch alerts:", error);
-    } finally {
-      if (!isRefresh) setIsLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const applyFilters = (alerts: AlertInterface[], search: string, status: FilterStatus) => {
-    let filtered = [...alerts];
+  const applyFilters = (currentAlerts: AlertInterface[] | null, search: string, status: FilterStatus) => {
+    const sourceAlerts = currentAlerts || []; // Guard against null
+    let newFiltered = [...sourceAlerts];
     
-    // Apply status filter
     if (status === 'active') {
-      filtered = filtered.filter(alert => !alert.acknowledged);
+      newFiltered = newFiltered.filter(alert => !alert.acknowledged);
     } else if (status === 'acknowledged') {
-      filtered = filtered.filter(alert => alert.acknowledged);
+      newFiltered = newFiltered.filter(alert => alert.acknowledged);
     }
     
-    // Apply search filter
     if (search.trim() !== '') {
       const lowerSearchTerm = search.toLowerCase();
-      filtered = filtered.filter(alert =>
+      newFiltered = newFiltered.filter(alert =>
         alert.message.toLowerCase().includes(lowerSearchTerm) ||
         alert.type.toLowerCase().includes(lowerSearchTerm) ||
         alert.roomName.toLowerCase().includes(lowerSearchTerm) ||
@@ -439,37 +412,58 @@ export default function AlertsListScreen() {
         (alert.acknowledgedByName && alert.acknowledgedByName.toLowerCase().includes(lowerSearchTerm))
       );
     }
-    
-    setFilteredAlerts(filtered);
+    setFilteredAlerts(newFiltered);
   };
+  
+  const fetchAlerts = async (isRefresh = false) => {
+    if (!isRefresh) setIsLoading(true);
+    else setRefreshing(true);
+    try {
+      const fetchedAlerts = await AlertService.getAlerts();
+      const safeFetchedAlerts = fetchedAlerts || []; // Guard
+      setAllAlerts(safeFetchedAlerts);
+      // applyFilters is now called by useEffect when allAlerts, searchTerm, or filterStatus changes
+    } catch (error) {
+      console.error("Failed to fetch alerts:", error);
+      setAllAlerts([]); // Set to empty array on error
+    } finally {
+      if (!isRefresh) setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
 
   useEffect(() => {
     const unsubscribe = AlertService.onAlertsUpdate(
       (updatedAlerts) => {
-        setAllAlerts(updatedAlerts);
-        applyFilters(updatedAlerts, searchTerm, filterStatus);
+        const safeUpdatedAlerts = updatedAlerts || []; // Guard
+        setAllAlerts(safeUpdatedAlerts);
+        // applyFilters will be called by the useEffect below that watches allAlerts
         if (isLoading) setIsLoading(false);
         if (refreshing) setRefreshing(false);
       },
       (error) => {
         console.error("Error listening to alert updates:", error);
+        setAllAlerts([]); // Set to empty array on error
         if (isLoading) setIsLoading(false);
         if (refreshing) setRefreshing(false);
       }
     );
     return () => unsubscribe();
-  }, [isLoading, refreshing, searchTerm, filterStatus]);
+  }, []); // Removed dependencies to prevent re-subscription, initial load is enough.
 
   const onRefresh = useCallback(() => {
     fetchAlerts(true);
-  }, []);
+  }, []); // fetchAlerts is stable due to its own useCallback if defined, or fine if not
 
   useEffect(() => {
+    // This effect will run whenever allAlerts, searchTerm, or filterStatus changes
     applyFilters(allAlerts, searchTerm, filterStatus);
-  }, [searchTerm, filterStatus, allAlerts]);
+  }, [allAlerts, searchTerm, filterStatus]);
+
 
   const sortedAndGroupedAlerts = useMemo(() => {
-    let sorted = [...filteredAlerts];
+    let sorted = [...(filteredAlerts || [])]; // Guard against null
 
     sorted.sort((a, b) => {
       let comparison = 0;
@@ -480,20 +474,21 @@ export default function AlertsListScreen() {
         comparison = dateA - dateB;
       } else if (sortConfig.option === 'severity') {
         comparison = severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity);
-        if (comparison === 0) comparison = dateB - dateA;
+        if (comparison === 0) comparison = dateB - dateA; // Secondary sort by date descending
       } else if (sortConfig.option === 'roomName') {
         comparison = a.roomName.localeCompare(b.roomName);
-        if (comparison === 0) comparison = dateB - dateA;
+        if (comparison === 0) comparison = dateB - dateA; // Secondary sort by date descending
       }
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
 
-    // Always show unacknowledged alerts first
+    // Always show unacknowledged alerts first within their sort group
     sorted.sort((a, b) => {
       if (a.acknowledged && !b.acknowledged) return 1;
       if (!a.acknowledged && b.acknowledged) return -1;
-      return 0;
+      return 0; // Keep original relative order if acknowledgement status is the same
     });
+
 
     const groups: { [key: string]: AlertInterface[] } = {};
     if (sortConfig.option === 'date') {
@@ -514,16 +509,16 @@ export default function AlertsListScreen() {
       });
       let groupSortOrder: string[];
       if (sortConfig.option === 'severity') {
-        groupSortOrder = [...severityOrder];
+        groupSortOrder = [...severityOrder]; // Use predefined severity order
         if(sortConfig.direction === 'desc') groupSortOrder.reverse();
-      } else {
+      } else { // roomName
         groupSortOrder = Object.keys(groups).sort((a,b) => sortConfig.direction === 'asc' ? a.localeCompare(b) : b.localeCompare(a));
       }
       return groupSortOrder
-        .filter(key => groups[key] && groups[key].length > 0)
+        .filter(key => groups[key] && groups[key].length > 0) // Ensure group exists and has data
         .map(key => ({ title: `${sortConfig.option === 'severity' ? key.charAt(0).toUpperCase() + key.slice(1) : key}`, data: groups[key] }));
     }
-    return [{ title: 'All Alerts', data: sorted }];
+    return [{ title: 'All Alerts', data: sorted }]; // Fallback for non-grouped sort
   }, [filteredAlerts, sortConfig]);
 
   const sortOptions = [
@@ -568,7 +563,6 @@ export default function AlertsListScreen() {
       <ThemedView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
         {/* Enhanced Header */}
         <View style={[styles.header, { backgroundColor: headerBackgroundColor }]}>
-          {/* Search Bar with Filter Toggle */}
           <View style={styles.searchRow}>
             <View style={[styles.searchContainer, {backgroundColor: searchInputBackgroundColor, borderColor: searchInputBorderColor}]}>
               <Ionicons name="search-outline" size={20} color={searchIconInputColor} style={styles.searchIcon} />
@@ -587,7 +581,6 @@ export default function AlertsListScreen() {
               )}
             </View>
 
-            {/* Filter Toggle Button */}
             <TouchableOpacity 
               style={[
                 styles.filterToggleButton, 
@@ -610,14 +603,13 @@ export default function AlertsListScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Animated Filter Panel */}
           <Animated.View 
             style={[
               styles.filterPanel,
               {
                 height: filterAnimation.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0, 120], // Adjust based on content
+                  outputRange: [0, 120], 
                 }),
                 opacity: filterAnimation,
                 marginBottom: filterAnimation.interpolate({
@@ -628,7 +620,6 @@ export default function AlertsListScreen() {
             ]}
             pointerEvents={isFiltersExpanded ? 'auto' : 'none'}
           >
-            {/* Status Filters */}
             <View style={styles.filterSection}>
               <ThemedText style={[styles.filterSectionTitle, { color: searchIconInputColor }]}>
                 Status
@@ -665,7 +656,6 @@ export default function AlertsListScreen() {
               </ScrollView>
             </View>
 
-            {/* Sort Options */}
             <View style={styles.filterSection}>
               <ThemedText style={[styles.filterSectionTitle, { color: searchIconInputColor }]}>
                 Sort by
@@ -701,7 +691,6 @@ export default function AlertsListScreen() {
           </Animated.View>
         </View>
 
-        {/* Content */}
         {sortedAndGroupedAlerts.length === 0 || (sortedAndGroupedAlerts.length === 1 && sortedAndGroupedAlerts[0].data.length === 0) ? (
           <View style={styles.centered}>
             <Ionicons 
@@ -730,7 +719,7 @@ export default function AlertsListScreen() {
         ) : (
           <SectionList
               sections={sortedAndGroupedAlerts}
-              keyExtractor={(item, index) => item.id} // Remove index from key
+              keyExtractor={(item) => item.id} 
               renderItem={({ item, section, index }) => 
                 <AlertItem 
                   item={item} 
@@ -738,13 +727,12 @@ export default function AlertsListScreen() {
                   sortConfig={sortConfig} 
                 />
               }
-              // Add these performance optimizations
               removeClippedSubviews={true}
               maxToRenderPerBatch={10}
               updateCellsBatchingPeriod={50}
               initialNumToRender={10}
               windowSize={10}
-              getItemLayout={undefined}
+              getItemLayout={undefined} // Consider implementing if performance issues arise with many items
               renderSectionHeader={({ section: { title, data } }) =>
               (data.length > 0) ? (
                 <View style={[styles.sectionHeaderContainer, { backgroundColor: containerBackgroundColor }]}>
@@ -770,9 +758,7 @@ export default function AlertsListScreen() {
     </>
   );
 }
-
-// ...existing code...
-
+// Styles remain the same as provided in the prompt
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -809,7 +795,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingBottom: Layout.spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.borderColor,
+    borderBottomColor: Colors.light.borderColor, // Consider theming this
     elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -875,19 +861,19 @@ const styles = StyleSheet.create({
     marginLeft: Layout.spacing.xs,
   },
   filterRow: {
-    paddingRight: Layout.spacing.md,
+    paddingRight: Layout.spacing.md, // Allow space for the last chip
     alignItems: 'center',
   },
   
-  // Filter Chips - Made slightly smaller
+  // Filter Chips
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Layout.spacing.sm, // Reduced from md
-    paddingVertical: Layout.spacing.xs, // Reduced from sm
+    paddingHorizontal: Layout.spacing.sm, 
+    paddingVertical: Layout.spacing.xs, 
     borderRadius: Layout.borderRadius.pill,
     marginRight: Layout.spacing.xs,
-    minHeight: 32, // Reduced from 36
+    minHeight: 32, 
   },
   chipIcon: {
     marginRight: Layout.spacing.xs / 2,
@@ -896,7 +882,7 @@ const styles = StyleSheet.create({
     marginLeft: Layout.spacing.xs / 2,
   },
   chipText: {
-    fontSize: Layout.fontSize.xs, // Reduced from sm
+    fontSize: Layout.fontSize.xs, 
     fontFamily: 'Montserrat-Medium',
   },
   chipBadge: {
@@ -916,11 +902,11 @@ const styles = StyleSheet.create({
   clearFiltersButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32, // Reduced from 36
-    height: 32, // Reduced from 36
+    width: 32, 
+    height: 32,
     borderRadius: Layout.borderRadius.pill,
     borderWidth: 1,
-    marginRight: Layout.spacing.xs,
+    marginRight: Layout.spacing.xs, // Ensure it doesn't touch edge if list scrolls
   },
   
   // Section Headers
@@ -929,9 +915,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Layout.spacing.md,
-    paddingHorizontal: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.md, // Match list item horizontal margin
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.borderColor,
+    // borderBottomColor is themed
   },
   sectionHeader: {
     fontSize: Layout.fontSize.lg,
@@ -946,7 +932,7 @@ const styles = StyleSheet.create({
   
   // List Content
   listContent: {
-    paddingTop: Layout.spacing.xs,
+    paddingTop: Layout.spacing.xs, 
     paddingBottom: Layout.spacing.xl,
   },
   
@@ -959,31 +945,23 @@ const styles = StyleSheet.create({
     paddingVertical: Layout.spacing.md,
     paddingHorizontal: Layout.spacing.md,
     borderRadius: Layout.borderRadius.lg,
-    position: 'relative',
+    position: 'relative', // For severity badge positioning
   },
-  // priorityIndicator: {
-  //   position: 'absolute',
-  //   left: 0,
-  //   top: 0,
-  //   bottom: 0,
-  //   width: 4,
-  //   borderTopLeftRadius: Layout.borderRadius.lg,
-  //   borderBottomLeftRadius: Layout.borderRadius.lg,
-  // },
   alertContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start', // Align icon with the start of text block
     backgroundColor: 'transparent',
   },
   alertIconContainer: {
-    position: 'relative',
+    position: 'relative', // For severity badge
     marginRight: Layout.spacing.md,
-    alignItems: 'center',
+    alignItems: 'center', // Center icon if it's alone
+    paddingTop: Layout.spacing.xs /2, // Align icon better with text
   },
-  severityBadge: {
+  severityBadge: { // Small dot/icon on the main alert icon
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -4, // Adjust for visual preference
+    right: -4, // Adjust for visual preference
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -1002,18 +980,18 @@ const styles = StyleSheet.create({
   alertHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start', // Important for multi-line message
     marginBottom: Layout.spacing.sm,
   },
   alertMessage: {
-    flex: 1,
+    flex: 1, // Allow message to take available space
     fontSize: Layout.fontSize.md,
     fontWeight: Layout.fontWeight.semibold,
     fontFamily: 'Montserrat-SemiBold',
-    marginRight: Layout.spacing.sm,
-    lineHeight: Layout.fontSize.md * 1.3,
+    marginRight: Layout.spacing.sm, // Space before status badge
+    lineHeight: Layout.fontSize.md * 1.3, // For better readability
   },
-  statusContainer: {
+  statusContainer: { // To align status badge properly if message wraps
     alignItems: 'flex-end',
   },
   statusBadge: {
@@ -1025,11 +1003,11 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: Layout.fontSize.xs,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: 'Montserrat-Bold', // Consistent with severity badge text style
     marginLeft: Layout.spacing.xs / 2,
   },
   alertMeta: {
-    gap: Layout.spacing.xs / 2,
+    gap: Layout.spacing.xs / 2, // Small gap between meta items
   },
   metaRow: {
     flexDirection: 'row',
@@ -1039,13 +1017,13 @@ const styles = StyleSheet.create({
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-Regular',
     marginLeft: Layout.spacing.xs,
-    flex: 1,
+    flex: 1, // Allow text to shrink if needed, prevent overflow
   },
   acknowledgedInfo: {
     marginTop: Layout.spacing.sm,
     paddingTop: Layout.spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.light.borderColor,
+    // borderTopColor is themed
   },
   acknowledgedByText: {
     fontSize: Layout.fontSize.xs,
@@ -1053,5 +1031,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     textAlign: 'right',
   },
-  lastItemInSection: {}
+  lastItemInSection: {
+    // No specific style needed currently, but placeholder for future
+  }
 });

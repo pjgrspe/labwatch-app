@@ -1,9 +1,44 @@
-// labwatch-app/utils/firebaseUtils.ts
-import { db } from '@/FirebaseConfig'; // Ensure db is exported from your FirebaseConfig
+// labwatch/utils/firebaseUtils.ts
+import { app, db } from '@/FirebaseConfig'; // Ensure db is exported from your FirebaseConfig
 import { Alert } from '@/types/alerts'; // Import Alert type
 import { Incident, NewIncident, UpdateIncident } from '@/types/incidents'; // Adjust path if needed
 import { Room } from '@/types/rooms'; // Import Room type
 import { Timestamp, addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+
+// --- START: Added for Realtime Database ESP32 ID fetching ---
+import { child, getDatabase, get as getRTDB, ref } from "firebase/database";
+
+export interface Esp32Device {
+  id: string;   // This will be the ESP32_DEVICE_ID
+  name: string; // For display, will also be the ESP32_DEVICE_ID
+}
+
+export const getAvailableEsp32DeviceIds = async (): Promise<Esp32Device[]> => {
+  try {
+    // Ensure 'app' is correctly initialized and firebaseConfig in APIkeys.ts includes 'databaseURL'
+    // e.g., databaseURL: "https://labwatch-app-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    const rtdb = getDatabase(app);
+    const devicesRefPath = 'esp32_devices_data';
+    const devicesNodeRef = child(ref(rtdb), devicesRefPath);
+    
+    const snapshot = await getRTDB(devicesNodeRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      // Extract keys (device IDs) from the snapshot
+      return Object.keys(data).map(deviceId => ({
+        id: deviceId,
+        name: deviceId // Use the ID as the name for display in the dropdown
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching ESP32 device IDs from RTDB:", error);
+    // Depending on how you want to handle errors, you might re-throw or return empty
+    return []; 
+  }
+};
+// --- END: Added for Realtime Database ESP32 ID fetching ---
 
 
 export const convertTimestamps = (data: any): any => {

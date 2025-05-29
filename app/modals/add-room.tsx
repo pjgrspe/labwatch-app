@@ -3,16 +3,16 @@ import { ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { Rooms } from '@/modules';
-import { Ionicons } from '@expo/vector-icons'; // Added for header icon
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
   Modal,
-  SafeAreaView, // Changed from ThemedView for consistency
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -20,14 +20,8 @@ import {
   TouchableOpacity
 } from 'react-native';
 
-// Mock ESP32 modules - replace with actual data source
-const ESP32_MODULES = [
-  { id: 'esp32_001', name: 'ESP32-001 (Lab Station A)', type: 'Multi-sensor' },
-  { id: 'esp32_002', name: 'ESP32-002 (Lab Station B)', type: 'Temperature/Humidity' },
-  { id: 'esp32_003', name: 'ESP32-003 (Air Quality Monitor)', type: 'Air Quality' },
-  { id: 'esp32_004', name: 'ESP32-004 (Thermal Imaging)', type: 'Thermal Camera' },
-  { id: 'esp32_005', name: 'ESP32-005 (Vibration Sensor)', type: 'Vibration' },
-];
+// Import the new utility function and type
+import { Esp32Device, getAvailableEsp32DeviceIds } from '@/utils/firebaseUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,8 +30,13 @@ export default function AddRoomModal() {
   const [roomName, setRoomName] = useState('');
   const [location, setLocation] = useState('');
   const [isMonitored, setIsMonitored] = useState(true);
-  const [selectedModule, setSelectedModule] = useState<typeof ESP32_MODULES[0] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // State for ESP32 devices
+  const [selectedModule, setSelectedModule] = useState<Esp32Device | null>(null);
+  const [esp32DevicesList, setEsp32DevicesList] = useState<Esp32Device[]>([]);
+  const [isLoadingEsp32List, setIsLoadingEsp32List] = useState(true);
+
+  const [isLoading, setIsLoading] = useState(false); // For the main add room action
   const [showModuleDropdown, setShowModuleDropdown] = useState(false);
 
   // Theme colors
@@ -55,6 +54,22 @@ export default function AddRoomModal() {
   const switchTrackColorFalse = borderColor;     
   const dropdownModalBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'cardBackground');
 
+  useEffect(() => {
+    const fetchDeviceIds = async () => {
+      setIsLoadingEsp32List(true);
+      try {
+        const devices = await getAvailableEsp32DeviceIds();
+        setEsp32DevicesList(devices);
+      } catch (error) {
+        console.error("Failed to fetch ESP32 device IDs:", error);
+        Alert.alert("Error", "Could not load available ESP32 modules. Please ensure your Firebase Realtime Database is configured and accessible.");
+      } finally {
+        setIsLoadingEsp32List(false);
+      }
+    };
+    fetchDeviceIds();
+  }, []);
+
   const handleAddRoom = async () => {
     if (!roomName.trim() || !location.trim()) {
       Alert.alert("Missing Information", "Please fill out both room name and location.");
@@ -62,12 +77,15 @@ export default function AddRoomModal() {
     }
     setIsLoading(true);
     try {
-      const roomData = {
+      const roomData: any = { // Use 'any' or a more specific type if needed for RoomService
         name: roomName,
         location,
         isMonitored,
-        ...(selectedModule && { esp32ModuleId: selectedModule.id, esp32ModuleName: selectedModule.name })
       };
+      if (selectedModule) {
+        roomData.esp32ModuleId = selectedModule.id;
+        roomData.esp32ModuleName = selectedModule.name; // Name is the ID itself
+      }
       
       await Rooms.RoomService.addRoom(roomData);
       Alert.alert(
@@ -78,11 +96,12 @@ export default function AddRoomModal() {
             text: "OK",
             onPress: () => {
               setIsLoading(false);
-              global.requestAnimationFrame(() => {
+              global.requestAnimationFrame(() => { // Ensure router action happens after state update
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(tabs)/rooms');
+                  // Fallback if canGoBack is false (e.g., deep link)
+                  router.replace('/(tabs)/rooms'); 
                 }
               });
             }
@@ -96,7 +115,7 @@ export default function AddRoomModal() {
     }
   };
 
-  const renderModuleItem = ({ item }: { item: typeof ESP32_MODULES[0] }) => (
+  const renderModuleItem = ({ item }: { item: Esp32Device }) => (
     <TouchableOpacity
       style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
       onPress={() => {
@@ -104,10 +123,25 @@ export default function AddRoomModal() {
         setShowModuleDropdown(false);
       }}
     >
+      {/* Displaying the ID as the primary identifier */}
       <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
-      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.type}</ThemedText>
+      {/* You can add a subtext if there's more info, e.g., "ESP32 Device" */}
+      {/* <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>ESP32 Device</ThemedText> */}
     </TouchableOpacity>
   );
+  
+  if (isLoadingEsp32List) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <ThemedView style={[styles.loadingView]}>
+          <ActivityIndicator size="large" color={tintColor} />
+          <ThemedText style={[styles.loadingText, { color: textColor, marginTop: Layout.spacing.md }]}>
+            Loading ESP32 Modules...
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -171,15 +205,13 @@ export default function AddRoomModal() {
             {selectedModule ? (
               <ThemedView style={styles.selectedModuleContent}>
                 <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
-                  {selectedModule.name}
+                  {selectedModule.name} 
                 </ThemedText>
-                <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
-                  {selectedModule.type}
-                </ThemedText>
+                {/* Optionally add a subtext if needed, e.g., "Registered ESP32" */}
               </ThemedView>
             ) : (
               <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                Select ESP32 Module (Optional)
+                Select ESP32 Device ID (Optional)
               </ThemedText>
             )}
             <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
@@ -238,13 +270,13 @@ export default function AddRoomModal() {
         onRequestClose={() => setShowModuleDropdown(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setShowModuleDropdown(false)} 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setShowModuleDropdown(false)} 
         >
           <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor: borderColor }]}>
             <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
-              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select ESP32 Module</ThemedText>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select ESP32 Device ID</ThemedText>
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => {
@@ -255,13 +287,25 @@ export default function AddRoomModal() {
                 <ThemedText style={[styles.clearButtonText, { color: tintColor }]}>Clear</ThemedText>
               </TouchableOpacity>
             </ThemedView>
-            <FlatList
-              data={ESP32_MODULES}
-              renderItem={renderModuleItem}
-              keyExtractor={(item) => item.id}
-              style={styles.dropdownList}
-              showsVerticalScrollIndicator={false}
-            />
+            {esp32DevicesList.length === 0 ? (
+                <ThemedView style={styles.emptyListContainer}>
+                    <Ionicons name="hardware-chip-outline" size={40} color={textSecondaryColor}/>
+                    <ThemedText style={[styles.emptyListText, {color: textColor}]}>
+                        No registered ESP32 devices found in Realtime Database.
+                    </ThemedText>
+                    <ThemedText style={[styles.emptyListSubText, {color: textSecondaryColor}]}>
+                        Ensure devices are sending data to '/esp32_devices_data/'.
+                    </ThemedText>
+                </ThemedView>
+            ) : (
+              <FlatList
+                data={esp32DevicesList}
+                renderItem={renderModuleItem}
+                keyExtractor={(item) => item.id}
+                style={styles.dropdownList}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </ThemedView>
         </TouchableOpacity>
       </Modal>
@@ -274,29 +318,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Layout.spacing.lg,
-    paddingVertical: Layout.spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    backgroundColor: 'transparent',
-  },
-  headerButton: {
-    width: 44, 
-    height: 44,
+  loadingView: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  headerTitle: {
-    fontSize: Layout.fontSize.xl,
-    fontFamily: 'Montserrat-Bold', 
-    fontWeight: Layout.fontWeight.bold,
+  loadingText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
   },
-  
-  // Content
   content: {
     flex: 1,
   },
@@ -304,8 +335,6 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
     gap: Layout.spacing.xl, 
   },
-  
-  // Sections
   section: {
     backgroundColor: 'transparent', 
   },
@@ -321,8 +350,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold', 
     fontWeight: Layout.fontWeight.semibold,
   },
-  
-  // Input Groups
   inputGroup: {
     marginBottom: Layout.spacing.lg,
     backgroundColor: 'transparent',
@@ -341,8 +368,6 @@ const styles = StyleSheet.create({
     fontSize: Layout.fontSize.md,
     fontFamily: 'Montserrat-Regular', 
   },
-  
-  // Dropdown (for selecting ESP32 module in the form)
   dropdown: {
     minHeight: 52, 
     borderWidth: 1,
@@ -362,7 +387,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
-  selectedModuleType: {
+  selectedModuleType: { // Kept for potential future use, though not used for simple ID list
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-Regular',
     marginTop: 2,
@@ -372,8 +397,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     flex: 1,
   },
-  
-  // Switch
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -397,8 +420,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: Layout.fontSize.sm * 1.4,
   },
-  
-  // Bottom Action (Button area)
   bottomAction: {
     padding: Layout.spacing.lg,
     paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), 
@@ -428,8 +449,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
     fontWeight: Layout.fontWeight.semibold,
   },
-  
-  // Modal for ESP32 Module Selection
   modalOverlay: { 
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)', 
@@ -474,9 +493,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Medium',
     fontWeight: Layout.fontWeight.medium,
   },
-  dropdownItemSubtext: {
+  dropdownItemSubtext: { // Kept for potential future use
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-Regular',
     marginTop: 2,
   },
+  emptyListContainer: {
+    padding: Layout.spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150, // Ensure it's not too small
+  },
+  emptyListText: {
+    marginTop: Layout.spacing.md,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    textAlign: 'center',
+  },
+  emptyListSubText: {
+    marginTop: Layout.spacing.xs,
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
+  }
 });
