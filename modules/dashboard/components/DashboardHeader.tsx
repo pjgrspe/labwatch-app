@@ -15,7 +15,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
 
   return (
     <LinearGradient
-      colors={currentTheme === 'light' ? [themeColors.gradientStart, themeColors.gradientEnd] : [themeColors.headerBackground, themeColors.subtleBackground]} //
+      colors={currentTheme === 'light' ? [themeColors.gradientStart, themeColors.gradientEnd] : [themeColors.headerBackground, themeColors.surfaceSecondary]} //
       style={styles.customHeaderGradient}
     >
       <ThemedView style={styles.customHeaderContent}>
