@@ -49,7 +49,7 @@ export default function MoreScreen() {
   const baseMenuItems = [
     { title: 'Emergency Protocols', route: '/(tabs)/more/protocols', icon: 'document-text-outline' as keyof typeof Ionicons.glyphMap },
     { title: 'Incident History', route: '/(tabs)/more/incidents', icon: 'archive-outline' as keyof typeof Ionicons.glyphMap },
-    { title: 'Knowledge Base', route: '/(tabs)/more/knowledge-base', icon: 'book-outline' as keyof typeof Ionicons.glyphMap },
+    // { title: 'Knowledge Base', route: '/(tabs)/more/knowledge-base', icon: 'book-outline' as keyof typeof Ionicons.glyphMap },
     { title: 'Settings', route: '/(tabs)/more/settings', icon: 'settings-outline' as keyof typeof Ionicons.glyphMap },
     { title: 'My Profile', route: '/profile', icon: 'person-circle-outline' as keyof typeof Ionicons.glyphMap },
   ] as const;

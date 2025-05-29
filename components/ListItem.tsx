@@ -3,7 +3,7 @@ import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleProp, StyleSheet, TextStyle, TouchableOpacity, ViewStyle } from 'react-native'; // Added TextStyle
+import { StyleProp, StyleSheet, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { Text as ThemedText, View as ThemedView } from './Themed';
 
 interface ListItemProps {
@@ -11,12 +11,12 @@ interface ListItemProps {
   subtitle?: string;
   onPress?: () => void;
   rightIconName?: keyof typeof Ionicons.glyphMap;
-  style?: StyleProp<ViewStyle>; // This is for the container (TouchableOpacity)
+  style?: StyleProp<ViewStyle>;
   showBorder?: boolean;
   leftIconName?: keyof typeof Ionicons.glyphMap;
   leftIconColor?: string;
-  titleStyle?: StyleProp<TextStyle>; // Corrected to TextStyle
-  subtitleStyle?: StyleProp<TextStyle>; // Corrected to TextStyle
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
 }
 
 export default function ListItem({
@@ -35,7 +35,6 @@ export default function ListItem({
   const subtitleColor = useThemeColor({}, 'icon');
   const borderColor = useThemeColor({}, 'borderColor');
   const defaultIconColor = useThemeColor({}, 'icon');
-  // Use the customLeftIconColor if provided, otherwise fall back to the theme's tint color for left icons by default
   const leftIconActualColor = useThemeColor({ light: customLeftIconColor, dark: customLeftIconColor }, customLeftIconColor ? 'text' : 'tint');
 
 
@@ -45,7 +44,7 @@ export default function ListItem({
       style={[
         styles.baseContainer,
         showBorder ? { borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth } : {},
-        style // Apply custom container styles directly to TouchableOpacity
+        style
       ]}
       disabled={!onPress}
       activeOpacity={onPress ? 0.7 : 1}
@@ -53,7 +52,7 @@ export default function ListItem({
       {leftIconName && (
         <Ionicons
           name={leftIconName}
-          size={22} // Slightly smaller for leading icons if desired
+          size={22}
           color={leftIconActualColor}
           style={styles.leftIcon}
         />
@@ -70,8 +69,7 @@ export default function ListItem({
 const styles = StyleSheet.create({
   baseContainer: {
     paddingVertical: Layout.spacing.md,
-    paddingHorizontal: Layout.spacing.md, // Adjusted for consistency if ListItems are directly on screen bg
-                                          // If inside Card, Card's padding will handle outer spacing
+    paddingHorizontal: Layout.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -80,15 +78,15 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     backgroundColor: 'transparent',
-     // Adjust margin based on whether icons are present
     marginHorizontal: Layout.spacing.sm,
   },
   title: {
     fontSize: Layout.fontSize.md,
-    fontWeight: Layout.fontWeight.medium,
+    fontFamily: 'Montserrat-SemiBold', // Changed for more emphasis
   },
   subtitle: {
     fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
     marginTop: Layout.spacing.xs,
     opacity: 0.8,
   },

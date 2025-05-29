@@ -9,23 +9,33 @@ interface CardProps extends PropsWithChildren {
   style?: StyleProp<ViewStyle>;
   disableShadow?: boolean;
   disableBorder?: boolean;
+  paddingSize?: keyof typeof Layout.spacing;
 }
 
-export default function Card({ children, style, disableShadow = false, disableBorder = false }: CardProps) {
+export default function Card({
+  children,
+  style,
+  disableShadow = false,
+  disableBorder = false,
+  paddingSize = 'md' // Changed default padding to 'md'
+}: CardProps) {
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const borderColor = useThemeColor({}, 'borderColor');
   const theme = useCurrentTheme();
 
-  // Use shadow styles from Layout constants
+  // Use theme-specific shadow from Layout
   const shadowStyle = theme === 'light' ? Layout.cardShadow : Layout.darkCardShadow;
 
   return (
     <ThemedView style={[
       styles.cardBase,
-      { backgroundColor: cardBackgroundColor },
-      !disableBorder && { borderColor: borderColor, borderWidth: 1 },
+      {
+        backgroundColor: cardBackgroundColor,
+        padding: Layout.spacing[paddingSize]
+      },
+      !disableBorder && { borderColor: borderColor, borderWidth: StyleSheet.hairlineWidth },
       !disableShadow && shadowStyle,
-      style, // Allows overriding individual styles
+      style,
     ]}>
       {children}
     </ThemedView>
@@ -35,7 +45,6 @@ export default function Card({ children, style, disableShadow = false, disableBo
 const styles = StyleSheet.create({
   cardBase: {
     borderRadius: Layout.borderRadius.md,
-    padding: Layout.spacing.lg,      // Updated padding
-    marginBottom: Layout.spacing.lg, // Consistent margin
+    marginBottom: Layout.spacing.md,
   },
 });

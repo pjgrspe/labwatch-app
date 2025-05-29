@@ -1,51 +1,56 @@
-// labwatch-app/app/(tabs)/_layout.tsx
+// app/(tabs)/_layout.tsx
 import { Colors } from '@/constants/Colors';
-import Layout from '@/constants/Layout'; // Import Layout
+import Layout from '@/constants/Layout';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Platform, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
 
+  const tabScreenOptions: BottomTabNavigationOptions = {
+    tabBarActiveTintColor: Colors[colorScheme].tint,
+    tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
+    tabBarStyle: {
+      backgroundColor: Colors[colorScheme].cardBackground,
+      borderTopColor: Colors[colorScheme].borderColor,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      paddingBottom: Layout.spacing.xs,
+      paddingTop: Layout.spacing.xs,
+    },
+    tabBarLabelStyle: {
+      fontSize: Layout.fontSize.xs,
+      fontWeight: Layout.fontWeight.medium as any,
+      fontFamily: 'Montserrat-Medium',
+      marginBottom: Platform.OS === 'ios' ? 0 : Layout.spacing.xs,
+
+    },
+    headerStyle: {
+      backgroundColor: Colors[colorScheme].headerBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors[colorScheme].borderColor,
+    },
+    headerTintColor: Colors[colorScheme].headerTint,
+    headerTitleStyle: {
+      fontWeight: Layout.fontWeight.bold as any,
+      fontSize: Layout.fontSize.header,
+      fontFamily: 'Montserrat-Bold',
+    },
+    headerBackTitleStyle: false, // Ensure this is a boolean if intended
+  };
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: Colors[colorScheme].cardBackground, // Using cardBackground for a slightly elevated look
-          borderTopColor: Colors[colorScheme].borderColor,
-          borderTopWidth: StyleSheet.hairlineWidth, // Keep it subtle
-          // height: 60, // Optional: if you want a specific height
-          paddingBottom: Layout.spacing.xs, // Add some padding for labels if needed
-          paddingTop: Layout.spacing.xs,
-        },
-        tabBarLabelStyle: {
-          fontSize: Layout.fontSize.xs,
-          fontWeight: Layout.fontWeight.medium,
-        },
-        headerStyle: {
-          backgroundColor: Colors[colorScheme].headerBackground,
-          elevation: 0, // Remove shadow for a flatter look like the image
-          shadowOpacity: 0, // Remove shadow for iOS
-          borderBottomWidth: 1,
-          borderBottomColor: Colors[colorScheme].borderColor,
-        },
-        headerTintColor: Colors[colorScheme].headerTint,
-        headerTitleStyle: {
-          fontWeight: Layout.fontWeight.bold,
-          fontSize: Layout.fontSize.header,
-        },
-      }}>
+    <Tabs screenOptions={tabScreenOptions}>
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
-          title: 'Home', // Changed from Dashboard to Home as per image
-          headerShown: true, // The image shows "My Sweet Home" header
+          title: 'Home',
+          headerShown: true,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} /> // Changed icon
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -53,7 +58,7 @@ export default function TabLayout() {
         name="rooms"
         options={{
           title: 'Rooms',
-          headerShown: true,
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),
@@ -62,10 +67,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="alerts"
         options={{
-          title: 'Alerts', // Placeholder for one of the image's icons
-          headerShown: true,
+          title: 'Alerts',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            // Choosing an icon that might fit the 'notifications' or 'activity' feel from image
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
         }}
@@ -73,17 +77,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: 'More', // Or Profile, matching the rightmost icon in image
-          headerShown: false, // The 'More' stack has its own header
+          title: 'More',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" size={size} color={color} /> // Changed to profile-like icon
+            <Ionicons name="menu-outline" size={size} color={color} />
           ),
         }}
       />
+      {/* The following line has been removed: */}
+      {/* <Tabs.Screen name="index" options={{ href: null, headerShown: false }} /> */}
     </Tabs>
   );
 }
-
-// Need to ensure StyleSheet is imported if using StyleSheet.hairlineWidth
-import { StyleSheet } from 'react-native';
-

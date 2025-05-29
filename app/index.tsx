@@ -1,83 +1,86 @@
 // labwatch-app/app/index.tsx
-import { Text as ThemedText } from '@/components/Themed';
-import { auth } from '@/FirebaseConfig'; // Import Firebase auth instance
+import { Text as ThemedText } from '@/components/Themed'; // Ensure ThemedView is imported if View below is ThemedView
+import { auth } from '@/FirebaseConfig';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { AuthService } from '@/modules/auth/services/AuthService'; // Import AuthService
-import { Redirect, SplashScreen } from 'expo-router';
-import { onAuthStateChanged, signOut } from 'firebase/auth'; // Import onAuthStateChanged and signOut
+import { AuthService } from '@/modules/auth/services/AuthService';
+import { SplashScreen, useRouter } from 'expo-router';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native'; // Standard View
 
 // Prevent the splash screen from hiding automatically until we've loaded our initial data.
 SplashScreen.preventAutoHideAsync();
 
 export default function AppEntry() {
-  const [initialRoute, setInitialRoute] = useState<string | null>(null);
-  const backgroundColor = useThemeColor({}, 'background'); // Get background color from theme
-  const tintColor = useThemeColor({}, 'tint'); // Get tint color for activity indicator
-  const textColor = useThemeColor({}, 'text'); // Get text color for loading message
+  const router = useRouter();
+  const backgroundColor = useThemeColor({}, 'background');
+  const tintColor = useThemeColor({}, 'tint');
+  const textColor = useThemeColor({}, 'text');
+  const [isRouterReady, setIsRouterReady] = useState(false);
 
   useEffect(() => {
-    console.log("AppEntry: Starting initial authentication state check.");
-    // This listener will fire once on component mount, and whenever the auth state changes.
+    // This effect helps ensure that the router has had a chance to mount.
+    // We'll only proceed with auth checks and navigation once isRouterReady is true.
+    setIsRouterReady(true);
+  }, []);
+
+  useEffect(() => {
+    // If the router isn't ready, don't attempt any navigation logic.
+    if (!isRouterReady) {
+      return;
+    }
+
+    console.log("AppEntry: Router is ready. Starting initial authentication state check.");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       let routeToNavigate: string;
 
       if (user) {
-        // A user is logged in via Firebase Auth. Now, check their profile status in Firestore.
         console.log(`AppEntry: Firebase user detected: ${user.uid}. Checking profile...`);
         try {
-          const userProfile = await AuthService.getUserProfile(user.uid); // Fetch profile via AuthService
+          const userProfile = await AuthService.getUserProfile(user.uid);
 
           if (userProfile) {
             console.log(`AppEntry: User profile status: ${userProfile.status}`);
             if (userProfile.status === "approved") {
-              routeToNavigate = "/(tabs)"; // Approved users go to the main app tabs
+              routeToNavigate = "/(tabs)/dashboard"; // Navigate to the main dashboard
             } else if (userProfile.status === "pending") {
-              routeToNavigate = "/auth/pending-approval"; // Pending users go to the pending screen
+              routeToNavigate = "/auth/pending-approval";
             } else if (userProfile.status === "denied") {
-              routeToNavigate = "/auth/denied"; // Denied users go to the denied screen
+              routeToNavigate = "/auth/denied";
             } else {
-              // Fallback for unknown status in Firestore. Treat as an error.
               console.warn("AppEntry: Unknown user profile status in Firestore. Signing out.");
-              await signOut(auth); // Sign out to ensure a clean state
-              routeToNavigate = "/auth/login"; // Redirect to login
+              await signOut(auth);
+              routeToNavigate = "/auth/login";
             }
           } else {
-            // This case should ideally not happen if signup always creates a user doc.
-            // If a Firebase user exists but no Firestore profile, it's a bad state.
             console.warn("AppEntry: Firebase user exists but no Firestore profile found. Signing out.");
-            await signOut(auth); // Sign out the Firebase user
-            routeToNavigate = "/auth/login"; // Redirect to login
+            await signOut(auth);
+            routeToNavigate = "/auth/login";
           }
         } catch (error) {
-          // Handle any errors during profile fetching (e.g., network issues, Firestore rules preventing read)
           console.error("AppEntry: Error fetching user profile:", error);
-          await signOut(auth); // Attempt to sign out to clear potentially problematic state
-          routeToNavigate = "/auth/login"; // Force login on error
+          await signOut(auth);
+          routeToNavigate = "/auth/login";
         }
       } else {
-        // No Firebase user is signed in (either never signed in, or explicitly signed out).
         console.log("AppEntry: No Firebase user signed in. Redirecting to login.");
-        routeToNavigate = "/auth/login"; // Direct to the login screen
+        routeToNavigate = "/auth/login";
       }
 
-      setInitialRoute(routeToNavigate); // Set the determined initial route
-      SplashScreen.hideAsync(); // Hide splash screen now that routing decision is made
+      console.log(`AppEntry: Determined route: ${routeToNavigate}. Navigating...`);
+      // Ensure router.replace is called. The 'as any' might be needed if routes are complex.
+      router.replace(routeToNavigate as any);
+      SplashScreen.hideAsync(); // Hide splash screen after navigation decision is made and acted upon
     });
 
-    // Clean up the Firebase auth state listener when the component unmounts
-    return () => unsubscribe();
-  }, []); // Empty dependency array ensures this effect runs only once on mount
+    return () => {
+      console.log("AppEntry: Unsubscribing from onAuthStateChanged listener.");
+      unsubscribe();
+    };
+  }, [router, isRouterReady]); // Add isRouterReady as a dependency
 
-  // If initialRoute is set, perform the redirect.
-  // This component will unmount once the redirection is complete.
-  if (initialRoute) {
-    return <Redirect href={initialRoute as any} />;
-  }
-
-  // While the initial route is being determined (during the auth state check),
-  // display a loading indicator.
+  // Render a loading indicator until navigation occurs.
+  // This component will effectively unmount once router.replace completes.
   return (
     <View style={[styles.loadingContainer, { backgroundColor }]}>
       <ActivityIndicator size="large" color={tintColor} />
