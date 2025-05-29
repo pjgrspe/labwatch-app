@@ -122,7 +122,7 @@ export default function DashboardScreen() {
         data={dashboardSections}
         renderItem={renderDashboardSection}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={<DashboardHeader currentTheme={currentTheme}/>} // Assuming DashboardHeader handles its own padding if needed
+        ListHeaderComponent={<DashboardHeader />} // Assuming DashboardHeader handles its own padding if needed
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.flatListContentContainer} // Overall padding for the list
         refreshControl={
