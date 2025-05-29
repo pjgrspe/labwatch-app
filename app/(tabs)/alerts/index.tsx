@@ -112,20 +112,32 @@ const FilterChip: React.FC<{
   onPress: () => void;
   showBadge?: boolean;
   badgeCount?: number;
-}> = ({ label, icon, isActive, onPress, showBadge, badgeCount }) => {
+  showSortDirection?: boolean;
+  sortDirection?: SortDirection;
+}> = React.memo(({ label, icon, isActive, onPress, showBadge, badgeCount, showSortDirection, sortDirection }) => {
+  // Call hooks at the top level
   const activeColor = useThemeColor({}, 'tint');
   const inactiveColor = useThemeColor({}, 'icon');
   const activeBackgroundColor = useThemeColor({light: Colors.light.tint + '15', dark: Colors.dark.tint + '20'}, 'background');
   const inactiveBackgroundColor = useThemeColor({light: Colors.light.surfaceSecondary, dark: Colors.dark.surfaceSecondary}, 'surfaceSecondary');
   const borderColor = useThemeColor({}, 'borderColor');
 
+  // Now memoize the colors object
+  const colors = useMemo(() => ({
+    activeColor,
+    inactiveColor,
+    activeBackgroundColor,
+    inactiveBackgroundColor,
+    borderColor,
+  }), [activeColor, inactiveColor, activeBackgroundColor, inactiveBackgroundColor, borderColor]);
+
   return (
     <TouchableOpacity
       style={[
         styles.filterChip,
         {
-          backgroundColor: isActive ? activeBackgroundColor : inactiveBackgroundColor,
-          borderColor: isActive ? activeColor : borderColor,
+          backgroundColor: isActive ? colors.activeBackgroundColor : colors.inactiveBackgroundColor,
+          borderColor: isActive ? colors.activeColor : colors.borderColor,
           borderWidth: isActive ? 1.5 : 1,
         }
       ]}
@@ -135,19 +147,27 @@ const FilterChip: React.FC<{
       {icon && (
         <Ionicons 
           name={icon} 
-          size={14} // Reduced from 16
-          color={isActive ? activeColor : inactiveColor} 
+          size={14}
+          color={isActive ? colors.activeColor : colors.inactiveColor} 
           style={styles.chipIcon} 
         />
       )}
       <ThemedText style={[
         styles.chipText,
-        { color: isActive ? activeColor : inactiveColor }
+        { color: isActive ? colors.activeColor : colors.inactiveColor }
       ]}>
         {label}
       </ThemedText>
+      {showSortDirection && isActive && sortDirection && (
+        <Ionicons 
+          name={sortDirection === 'asc' ? 'chevron-up' : 'chevron-down'} 
+          size={12} 
+          color={colors.activeColor} 
+          style={styles.sortIcon} 
+        />
+      )}
       {showBadge && badgeCount !== undefined && badgeCount > 0 && (
-        <View style={[styles.chipBadge, { backgroundColor: activeColor }]}>
+        <View style={[styles.chipBadge, { backgroundColor: colors.activeColor }]}>
           <ThemedText style={styles.chipBadgeText}>
             {badgeCount > 99 ? '99+' : badgeCount.toString()}
           </ThemedText>
@@ -155,15 +175,27 @@ const FilterChip: React.FC<{
       )}
     </TouchableOpacity>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.label === nextProps.label &&
+    prevProps.icon === nextProps.icon &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.showBadge === nextProps.showBadge &&
+    prevProps.badgeCount === nextProps.badgeCount &&
+    prevProps.showSortDirection === nextProps.showSortDirection &&
+    prevProps.sortDirection === nextProps.sortDirection
+  );
+});
 
-// --- Enhanced Alert Item Component ---
+// --- Enhanced Alert Item Component - Optimized ---
 const AlertItem: React.FC<{ 
   item: AlertInterface; 
   isLastItemInSection?: boolean; 
   sortConfig: SortConfig;
-}> = ({ item, isLastItemInSection, sortConfig }) => {
+}> = React.memo(({ item, isLastItemInSection, sortConfig }) => {
   const router = useRouter();
+  
+  // Call hooks at the top level
   const itemSeverityColor = useThemeColor({}, severityThemeColors[item.severity] || 'text');
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const titleColor = useThemeColor({}, 'text');
@@ -171,55 +203,72 @@ const AlertItem: React.FC<{
   const acknowledgedColor = useThemeColor({}, 'successText');
   const borderColor = useThemeColor({}, 'borderColor');
 
-  const timeString = item.timestamp instanceof Date
-    ? item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : (item.timestamp && 'seconds' in item.timestamp)
-      ? new Date((item.timestamp as any).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'N/A';
+  // Memoize color calculations
+  const colors = useMemo(() => ({
+    itemSeverityColor,
+    cardBackgroundColor,
+    titleColor,
+    detailColor,
+    acknowledgedColor,
+    borderColor,
+  }), [itemSeverityColor, cardBackgroundColor, titleColor, detailColor, acknowledgedColor, borderColor]);
 
-  const dateString = item.timestamp instanceof Date
-    ? item.timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' })
-    : (item.timestamp && 'seconds' in item.timestamp)
-      ? new Date((item.timestamp as any).seconds * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })
-      : 'N/A';
+  // Memoize date calculations
+  const dateInfo = useMemo(() => {
+    const timestamp = item.timestamp instanceof Date
+      ? item.timestamp
+      : (item.timestamp && 'seconds' in item.timestamp)
+        ? new Date((item.timestamp as any).seconds * 1000)
+        : new Date();
 
-  const acknowledgedAtString = item.acknowledgedAt instanceof Date
-    ? ` @ ${item.acknowledgedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    : (item.acknowledgedAt && 'seconds' in item.acknowledgedAt)
-      ? ` @ ${new Date((item.acknowledgedAt as any).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-      : '';
+    const acknowledgedAt = item.acknowledgedAt instanceof Date
+      ? item.acknowledgedAt
+      : (item.acknowledgedAt && 'seconds' in item.acknowledgedAt)
+        ? new Date((item.acknowledgedAt as any).seconds * 1000)
+        : null;
+
+    return {
+      timeString: timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateString: timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+      acknowledgedAtString: acknowledgedAt
+        ? ` @ ${acknowledgedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : '',
+    };
+  }, [item.timestamp, item.acknowledgedAt]);
+
+  // Memoize icon
+  const alertIcon = useMemo(() => getIconForAlertType(item.type), [item.type]);
+
+  // Memoize press handler
+  const handlePress = useCallback(() => {
+    router.push(`/(tabs)/alerts/${item.id}` as any);
+  }, [item.id, router]);
 
   return (
     <TouchableOpacity 
-      onPress={() => router.push(`/(tabs)/alerts/${item.id}` as any)} 
+      onPress={handlePress}
       style={styles.alertItemTouchable}
       activeOpacity={0.8}
     >
       <Card style={[
         styles.alertCard,
         { 
-          backgroundColor: cardBackgroundColor,
-          borderColor: item.acknowledged ? borderColor : itemSeverityColor,
+          backgroundColor: colors.cardBackgroundColor,
+          borderColor: item.acknowledged ? colors.borderColor : colors.itemSeverityColor,
           borderWidth: item.acknowledged ? 1 : 2,
           opacity: item.acknowledged ? 0.7 : 1,
         },
         isLastItemInSection ? styles.lastItemInSection : {}
       ]}>
-        {/* Priority Indicator */}
-        <View style={[
-          styles.priorityIndicator,
-          { backgroundColor: item.acknowledged ? acknowledgedColor : itemSeverityColor }
-        ]} />
-        
         <View style={styles.alertContent}>
           <View style={styles.alertIconContainer}>
             <Ionicons 
-              name={getIconForAlertType(item.type)} 
+              name={alertIcon} 
               size={32} 
-              color={item.acknowledged ? acknowledgedColor : itemSeverityColor}
+              color={item.acknowledged ? colors.acknowledgedColor : colors.itemSeverityColor}
             />
             {!item.acknowledged && (
-              <View style={[styles.severityBadge, { backgroundColor: itemSeverityColor }]}>
+              <View style={[styles.severityBadge, { backgroundColor: colors.itemSeverityColor }]}>
                 <ThemedText style={styles.severityBadgeText}>
                   {item.severity === 'critical' ? '!' : item.severity.charAt(0).toUpperCase()}
                 </ThemedText>
@@ -229,20 +278,20 @@ const AlertItem: React.FC<{
           
           <View style={styles.alertTextContainer}>
             <View style={styles.alertHeader}>
-              <ThemedText style={[styles.alertMessage, { color: titleColor }]} numberOfLines={2}>
+              <ThemedText style={[styles.alertMessage, { color: colors.titleColor }]} numberOfLines={2}>
                 {item.message.split(':')[0] || item.type.replace(/_/g, ' ')}
               </ThemedText>
               <View style={styles.statusContainer}>
                 {item.acknowledged ? (
-                  <View style={[styles.statusBadge, { backgroundColor: acknowledgedColor + '20' }]}>
-                    <Ionicons name="checkmark-circle" size={14} color={acknowledgedColor} />
-                    <ThemedText style={[styles.statusText, { color: acknowledgedColor }]}>
+                  <View style={[styles.statusBadge, { backgroundColor: colors.acknowledgedColor + '20' }]}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.acknowledgedColor} />
+                    <ThemedText style={[styles.statusText, { color: colors.acknowledgedColor }]}>
                       ACK
                     </ThemedText>
                   </View>
                 ) : (
-                  <View style={[styles.statusBadge, { backgroundColor: itemSeverityColor + '20' }]}>
-                    <ThemedText style={[styles.statusText, { color: itemSeverityColor }]}>
+                  <View style={[styles.statusBadge, { backgroundColor: colors.itemSeverityColor + '20' }]}>
+                    <ThemedText style={[styles.statusText, { color: colors.itemSeverityColor }]}>
                       {item.severity.toUpperCase()}
                     </ThemedText>
                   </View>
@@ -252,17 +301,17 @@ const AlertItem: React.FC<{
             
             <View style={styles.alertMeta}>
               <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={14} color={detailColor} />
-                <ThemedText style={[styles.metaText, { color: detailColor }]} numberOfLines={1}>
+                <Ionicons name="location-outline" size={14} color={colors.detailColor} />
+                <ThemedText style={[styles.metaText, { color: colors.detailColor }]} numberOfLines={1}>
                   {item.roomName}
                   {item.sensorId && ` • ${item.sensorId.substring(item.sensorId.lastIndexOf('-') + 1)}`}
                 </ThemedText>
               </View>
               
               <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={14} color={detailColor} />
-                <ThemedText style={[styles.metaText, { color: detailColor }]}>
-                  {sortConfig.option === 'date' ? timeString : `${dateString}, ${timeString}`}
+                <Ionicons name="time-outline" size={14} color={colors.detailColor} />
+                <ThemedText style={[styles.metaText, { color: colors.detailColor }]}>
+                  {sortConfig.option === 'date' ? dateInfo.timeString : `${dateInfo.dateString}, ${dateInfo.timeString}`}
                 </ThemedText>
               </View>
             </View>
@@ -271,15 +320,27 @@ const AlertItem: React.FC<{
         
         {item.acknowledged && item.acknowledgedByName && (
           <View style={styles.acknowledgedInfo}>
-            <ThemedText style={[styles.acknowledgedByText, { color: detailColor }]}>
-              Acknowledged by {item.acknowledgedByName}{acknowledgedAtString}
+            <ThemedText style={[styles.acknowledgedByText, { color: colors.detailColor }]}>
+              Acknowledged by {item.acknowledgedByName}{dateInfo.acknowledgedAtString}
             </ThemedText>
           </View>
         )}
       </Card>
     </TouchableOpacity>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.acknowledged === nextProps.item.acknowledged &&
+    prevProps.item.severity === nextProps.item.severity &&
+    prevProps.item.message === nextProps.item.message &&
+    prevProps.item.roomName === nextProps.item.roomName &&
+    prevProps.isLastItemInSection === nextProps.isLastItemInSection &&
+    prevProps.sortConfig.option === nextProps.sortConfig.option &&
+    prevProps.sortConfig.direction === nextProps.sortConfig.direction
+  );
+});
 
 // --- Main Screen Component ---
 export default function AlertsListScreen() {
@@ -623,19 +684,18 @@ export default function AlertsListScreen() {
                     icon={option.icon}
                     isActive={sortConfig.option === option.option}
                     onPress={() => handleSortChange(option.option)}
+                    showSortDirection={true}
+                    sortDirection={sortConfig.option === option.option ? sortConfig.direction : undefined}
                   />
                 ))}
                 
                 {hasActiveFilters && (
                   <TouchableOpacity 
-                    style={[styles.clearFiltersButton, { borderColor: searchIconInputColor }]}
+                    style={[styles.clearFiltersButton, { borderColor: '#FF4444', backgroundColor: '#FF444410' }]}
                     onPress={clearAllFilters}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="refresh-outline" size={14} color={searchIconInputColor} /> {/* Reduced from 16 */}
-                    <ThemedText style={[styles.clearFiltersText, { color: searchIconInputColor }]}>
-                      Reset
-                    </ThemedText>
+                    <Ionicons name="refresh-outline" size={14} color="#FF4444" />
                   </TouchableOpacity>
                 )}
               </ScrollView>
@@ -671,16 +731,23 @@ export default function AlertsListScreen() {
           </View>
         ) : (
           <SectionList
-            sections={sortedAndGroupedAlerts}
-            keyExtractor={(item, index) => item.id + index}
-            renderItem={({ item, section, index }) => 
-              <AlertItem 
-                item={item} 
-                isLastItemInSection={index === section.data.length - 1} 
-                sortConfig={sortConfig} 
-              />
-            }
-            renderSectionHeader={({ section: { title, data } }) =>
+              sections={sortedAndGroupedAlerts}
+              keyExtractor={(item, index) => item.id} // Remove index from key
+              renderItem={({ item, section, index }) => 
+                <AlertItem 
+                  item={item} 
+                  isLastItemInSection={index === section.data.length - 1} 
+                  sortConfig={sortConfig} 
+                />
+              }
+              // Add these performance optimizations
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              updateCellsBatchingPeriod={50}
+              initialNumToRender={10}
+              windowSize={10}
+              getItemLayout={undefined}
+              renderSectionHeader={({ section: { title, data } }) =>
               (data.length > 0) ? (
                 <View style={[styles.sectionHeaderContainer, { backgroundColor: containerBackgroundColor }]}>
                   <ThemedText style={[styles.sectionHeader, { color: sectionHeaderTextColor }]}>
@@ -814,51 +881,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Filter Chips - Made smaller
+  // Filter Chips - Made slightly smaller
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Layout.spacing.sm, // Reduced from md
     paddingVertical: Layout.spacing.xs, // Reduced from sm
     borderRadius: Layout.borderRadius.pill,
-    marginRight: Layout.spacing.xs, // Reduced from sm
+    marginRight: Layout.spacing.xs,
     minHeight: 32, // Reduced from 36
   },
   chipIcon: {
-    marginRight: Layout.spacing.xs / 2, // Reduced spacing
+    marginRight: Layout.spacing.xs / 2,
+  },
+  sortIcon: {
+    marginLeft: Layout.spacing.xs / 2,
   },
   chipText: {
     fontSize: Layout.fontSize.xs, // Reduced from sm
     fontFamily: 'Montserrat-Medium',
   },
   chipBadge: {
-    marginLeft: Layout.spacing.xs / 2, // Reduced spacing
-    paddingHorizontal: Layout.spacing.xs / 2, // Made smaller
-    paddingVertical: 1, // Reduced from 2
+    marginLeft: Layout.spacing.xs / 2,
+    paddingHorizontal: Layout.spacing.xs / 2,
+    paddingVertical: 1,
     borderRadius: Layout.borderRadius.pill,
-    minWidth: 16, // Reduced from 20
+    minWidth: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipBadgeText: {
-    fontSize: Layout.fontSize.xs - 2, // Made even smaller
+    fontSize: Layout.fontSize.xs - 2,
     fontFamily: 'Montserrat-Bold',
     color: '#FFFFFF',
   },
   clearFiltersButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Layout.spacing.sm, // Reduced from md
-    paddingVertical: Layout.spacing.xs, // Reduced from sm
+    justifyContent: 'center',
+    width: 32, // Reduced from 36
+    height: 32, // Reduced from 36
     borderRadius: Layout.borderRadius.pill,
     borderWidth: 1,
-    marginRight: Layout.spacing.xs, // Reduced from sm
-    minHeight: 32, // Reduced from 36
-  },
-  clearFiltersText: {
-    fontSize: Layout.fontSize.xs, // Reduced from sm
-    fontFamily: 'Montserrat-Medium',
-    marginLeft: Layout.spacing.xs / 2, // Reduced spacing
+    marginRight: Layout.spacing.xs,
   },
   
   // Section Headers
@@ -899,15 +963,15 @@ const styles = StyleSheet.create({
     borderRadius: Layout.borderRadius.lg,
     position: 'relative',
   },
-  priorityIndicator: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: Layout.borderRadius.lg,
-    borderBottomLeftRadius: Layout.borderRadius.lg,
-  },
+  // priorityIndicator: {
+  //   position: 'absolute',
+  //   left: 0,
+  //   top: 0,
+  //   bottom: 0,
+  //   width: 4,
+  //   borderTopLeftRadius: Layout.borderRadius.lg,
+  //   borderBottomLeftRadius: Layout.borderRadius.lg,
+  // },
   alertContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
