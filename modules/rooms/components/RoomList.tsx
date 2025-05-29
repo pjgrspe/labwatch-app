@@ -120,6 +120,7 @@ const RoomItem: React.FC<{ item: Room }> = React.memo(({ item }) => {
           backgroundColor: cardBackgroundColor,
           borderColor: borderColor,
           borderLeftColor: statusColor,
+          marginVertical: Layout.spacing.sm,
         }
       ]}>
         <ThemedView style={styles.roomCardContent}>

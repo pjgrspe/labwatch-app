@@ -11,12 +11,13 @@ const Layout = {
   },
   isSmallDevice: width < 375,
   spacing: {
-    xs: 4,
+    xxs: 2,
+    xs: 4, // Reduced for tighter spacing
     sm: 8,
-    md: 16,
-    lg: 24, // Slightly increased for more generous spacing
-    xl: 32,
-    xxl: 40, // New larger spacing
+    md: 12,
+    lg: 16, // Slightly increased for more generous spacing
+    xl: 24,
+    xxl: 32, // New larger spacing
   },
   borderRadius: {
     sm: 6,  // Softer rounding

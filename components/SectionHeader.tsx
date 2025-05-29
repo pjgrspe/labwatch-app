@@ -1,9 +1,9 @@
 // labwatch-app/components/SectionHeader.tsx
-import { ThemedText } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text as ThemedText } from './Themed'; // Direct import instead of from barrel file
 
 interface SectionHeaderProps {
   title: string;

@@ -1,14 +1,12 @@
 // labwatch-app/modules/dashboard/components/DashboardHeader.tsx
-import { ThemedText, ThemedView } from '@/components';
-import { Colors, ColorScheme, Layout } from '@/constants';
+import { Card, ThemedView } from '@/components';
+import Typography from '@/components/Typography';
+import { Badge } from '@/components/ui';
+import { Layout } from '@/constants';
+import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
-
-interface DashboardHeaderProps {
-  currentTheme: ColorScheme;
-}
 
 interface WeatherData {
   temperature: number;
@@ -17,26 +15,24 @@ interface WeatherData {
   icon: keyof typeof Ionicons.glyphMap;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
-  const themeColors = Colors[currentTheme];
+export const DashboardHeader: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather, setWeather] = useState<WeatherData>({
     temperature: 24,
     condition: 'Partly Cloudy',
     humidity: 65,
     icon: 'partly-sunny-outline'
-  });
+  });  const iconColor = useThemeColor({}, 'icon');
+  const mutedColor = useThemeColor({}, 'icon');
 
-  // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
-
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Mock weather data
+  // Mock weather data based on time
   useEffect(() => {
     const hour = currentTime.getHours();
     let mockWeather: WeatherData;
@@ -55,24 +51,33 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
         humidity: 55,
         icon: 'partly-sunny-outline'
       };
-    } else if (hour >= 18 && hour < 22) {
-      mockWeather = {
-        temperature: 25,
-        condition: 'Clear',
-        humidity: 70,
-        icon: 'moon-outline'
-      };
     } else {
       mockWeather = {
-        temperature: 19,
-        condition: 'Clear Night',
-        humidity: 75,
+        temperature: 20,
+        condition: 'Clear',
+        humidity: 70,
         icon: 'moon-outline'
       };
     }
 
     setWeather(mockWeather);
   }, [currentTime]);
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -80,234 +85,100 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentTheme }) => {
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
   };
-
-  const getFormattedDate = () => {
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    };
-    return currentTime.toLocaleDateString('en-US', options);
-  };
-
-  const getFormattedTime = () => {
-    return currentTime.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const getUserName = () => {
-    return 'Dr. Smith';
-  };
-
   return (
-    <LinearGradient
-      colors={currentTheme === 'light' 
-        ? [themeColors.tint, themeColors.accent] 
-        : [themeColors.headerBackground, themeColors.surfaceSecondary]
-      }
-      style={styles.headerGradient}
-    >
-      <ThemedView style={styles.headerContent}>
-        {/* Main Greeting */}
-        <ThemedView style={styles.greetingSection}>
-          <ThemedText style={styles.greeting}>
-            {getGreeting()}, {getUserName()}
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Welcome back to LabWatch
-          </ThemedText>
-        </ThemedView>
-
-        {/* Date and Time Info */}
-        <ThemedView style={styles.infoSection}>
-          <ThemedView style={styles.dateTimeContainer}>
-            <ThemedView style={styles.dateTimeItem}>
-              <Ionicons name="calendar-outline" size={16} color="#FFFFFF" style={styles.infoIcon} />
-              <ThemedText style={styles.dateText}>{getFormattedDate()}</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.dateTimeItem}>
-              <Ionicons name="time-outline" size={16} color="#FFFFFF" style={styles.infoIcon} />
-              <ThemedText style={styles.timeText}>{getFormattedTime()}</ThemedText>
+    <ThemedView style={styles.container}>
+      {/* Main Header Card */}
+      <Card style={styles.headerCard}>
+        <ThemedView style={styles.headerContent}>
+          {/* Left Section - Greeting and Time */}
+          <ThemedView style={styles.leftSection}>            <Typography variant="h3" style={styles.greeting}>
+              {getGreeting()}, Patrick! 👋
+            </Typography>
+            <ThemedView style={styles.timeContainer}>
+              <Ionicons name="time-outline" size={16} color={iconColor} />              <Typography variant="body2" style={[styles.timeText, { color: mutedColor }]}>
+                {formatTime(currentTime)}
+              </Typography>
+              <Typography variant="body2" style={[styles.dateText, { color: mutedColor }]}>
+                • {formatDate(currentTime)}
+              </Typography>
             </ThemedView>
           </ThemedView>
 
-          {/* Weather Info */}
-          <ThemedView style={styles.weatherContainer}>
-            <ThemedView style={styles.weatherMain}>
-              <Ionicons name={weather.icon} size={24} color="#FFFFFF" style={styles.weatherIcon} />
-              <ThemedView style={styles.weatherText}>
-                <ThemedText style={styles.temperature}>{weather.temperature}°C</ThemedText>
-                <ThemedText style={styles.weatherCondition}>{weather.condition}</ThemedText>
+          {/* Right Section - Status Indicators */}
+          <ThemedView style={styles.rightSection}>
+            <ThemedView style={styles.statusContainer}>              <Badge
+                label="Online"
+                variant="success"
+                size="sm"
+                icon="checkmark-circle"
+              />
+              <ThemedView style={styles.weatherContainer}>
+                <Ionicons name={weather.icon} size={20} color={iconColor} />                <Typography variant="body2" style={[styles.weatherText, { color: mutedColor }]}>
+                  {weather.temperature}°C
+                </Typography>
               </ThemedView>
-            </ThemedView>
-            <ThemedView style={styles.weatherDetail}>
-              <Ionicons name="water-outline" size={14} color="#FFFFFF" style={styles.weatherDetailIcon} />
-              <ThemedText style={styles.humidity}>{weather.humidity}%</ThemedText>
-            </ThemedView>
-          </ThemedView>
+            </ThemedView>          </ThemedView>
         </ThemedView>
-
-        {/* Status Indicator */}
-        <ThemedView style={styles.statusBar}>
-          <ThemedView style={styles.statusItem}>
-            <ThemedView style={[styles.statusDot, {backgroundColor: themeColors.successText }]} />
-            <ThemedText style={styles.statusText}>System Online</ThemedText>
-          </ThemedView>
-          <ThemedView style={styles.statusDivider} />
-          <ThemedView style={styles.statusItem}>
-            <Ionicons name="shield-checkmark" size={14} color={themeColors.successText} style={styles.statusIcon} />
-            <ThemedText style={styles.statusText}>Monitoring Active</ThemedText>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
-    </LinearGradient>
+      </Card>
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
-  headerGradient: {
-    paddingTop: Layout.spacing.xl, // Keep more top padding for visual hierarchy
-    paddingBottom: Layout.spacing.lg,
-    paddingHorizontal: Layout.spacing.md, // Changed from lg to md for consistency
-    // marginBottom: Layout.spacing.md, // Add margin to separate from content below if needed
+  container: {
+    paddingHorizontal: Layout.spacing.md,
+    paddingTop: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.md,
+  },
+  
+  // Main Header Card
+  headerCard: {
+    marginBottom: Layout.spacing.md,
   },
   headerContent: {
-    backgroundColor: 'transparent',
-  },
-  greetingSection: {
-    marginBottom: Layout.spacing.lg,
-    backgroundColor: 'transparent',
-  },
-  greeting: {
-    fontSize: Layout.fontSize.xxl,
-    fontFamily: 'Montserrat-Bold',
-    color: '#FFFFFF',
-    marginBottom: Layout.spacing.xs / 2,
-  },
-  subtitle: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-  infoSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Layout.spacing.md,
-    backgroundColor: 'transparent',
   },
-  dateTimeContainer: {
+  
+  // Left Section
+  leftSection: {
     flex: 1,
-    backgroundColor: 'transparent',
+    marginRight: Layout.spacing.md,
   },
-  dateTimeItem: {
+  greeting: {
+    marginBottom: Layout.spacing.xs,
+  },
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Layout.spacing.xs,
-    backgroundColor: 'transparent',
-  },
-  infoIcon: {
-    marginRight: Layout.spacing.xs,
-  },
-  dateText: {
-    fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Medium',
-    color: '#FFFFFF',
-    opacity: 0.9,
+    flexWrap: 'wrap',
   },
   timeText: {
-    fontSize: Layout.fontSize.sm,
+    marginLeft: Layout.spacing.xs,
     fontFamily: 'Montserrat-SemiBold',
-    color: '#FFFFFF',
+  },
+  dateText: {
+    marginLeft: Layout.spacing.xs,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: Layout.fontSize.sm,
+  },
+  
+  // Right Section
+  rightSection: {
+    alignItems: 'flex-end',
+  },
+  statusContainer: {
+    alignItems: 'flex-end',
+    gap: Layout.spacing.sm,
   },
   weatherContainer: {
-    alignItems: 'flex-end',
-    backgroundColor: 'transparent',
-  },
-  weatherMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Layout.spacing.xs / 2,
-    backgroundColor: 'transparent',
-  },
-  weatherIcon: {
-    marginRight: Layout.spacing.xs,
-  },
-  weatherText: {
-    alignItems: 'flex-end',
-    backgroundColor: 'transparent',
-  },
-  temperature: {
-    fontSize: Layout.fontSize.lg,
-    fontFamily: 'Montserrat-Bold',
-    color: '#FFFFFF',
-    lineHeight: Layout.fontSize.lg,
-  },
-  weatherCondition: {
-    fontSize: Layout.fontSize.xs,
+    gap: Layout.spacing.xs,
+  },  weatherText: {
     fontFamily: 'Montserrat-Medium',
-    color: '#FFFFFF',
-    opacity: 0.8,
-  },
-  weatherDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  weatherDetailIcon: {
-    marginRight: Layout.spacing.xs / 2,
-  },
-  humidity: {
-    fontSize: Layout.fontSize.xs,
-    fontFamily: 'Montserrat-Medium',
-    color: '#FFFFFF',
-    opacity: 0.8,
-  },
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // This might need theme-specific adjustment
-                                                // For dark theme, a darker translucent bg might be better
-                                                // e.g., currentTheme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)'
-    borderRadius: Layout.borderRadius.md,
-    paddingVertical: Layout.spacing.sm,
-    paddingHorizontal: Layout.spacing.md,
-    marginTop: Layout.spacing.sm, // Added margin top for better spacing
-  },
-  statusItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1, // Distribute space
-    justifyContent: 'center', // Center items within their flex area
-    backgroundColor: 'transparent',
-  },
-  statusDot: { // Dynamic color based on theme.successText
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    // backgroundColor will be set dynamically
-    marginRight: Layout.spacing.xs,
-  },
-  statusIcon: { // Dynamic color based on theme.successText
-    marginRight: Layout.spacing.xs,
-  },
-  statusText: {
-    fontSize: Layout.fontSize.xs,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#FFFFFF', // White text on the translucent status bar
-    opacity: 0.9,
-  },
-  statusDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)', // Similar to statusBar bg, this might need theme adjustment
-    marginHorizontal: Layout.spacing.sm, // Reduced from md for a tighter look
-  },
-});
+    fontSize: Layout.fontSize.sm,
+  },});
 
 export default DashboardHeader;

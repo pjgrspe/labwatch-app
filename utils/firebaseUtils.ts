@@ -29,11 +29,38 @@ export const convertTimestamps = (data: any): any => {
 
 const incidentsCollection = collection(db, 'incidents');
 
+export const removeUndefinedValues = (obj: Record<string, any>): Record<string, any> => {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      // Recursively clean nested objects
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        acc[key] = removeUndefinedValues(value);
+      } else {
+        acc[key] = value;
+      }
+    }
+    return acc;
+  }, {} as Record<string, any>);
+};
+
 export const addIncident = async (incidentData: NewIncident): Promise<string> => {
   try {
+    // Clean the data before sending to Firestore
+    const cleanData = removeUndefinedValues(incidentData);
+    
+    // Security rules require reportedAt to be request.time
+    // Since serverTimestamp() is used as request.time in rules
+    // Let's make sure we're not trying to set it ourselves
     const docRef = await addDoc(incidentsCollection, {
-      ...incidentData,
-      reportedAt: serverTimestamp(),
+      ...cleanData,
+      // Make sure reportedBy is set correctly
+      reportedBy: cleanData.reportedBy, // This must match auth.uid in rules
+      roomId: cleanData.roomId,
+      title: cleanData.title,
+      description: cleanData.description,
+      status: cleanData.status,
+      severity: cleanData.severity,
+      reportedAt: serverTimestamp(), // This matches request.time in rules
       updatedAt: serverTimestamp(),
     });
     return docRef.id;
@@ -70,9 +97,12 @@ export const getIncidentById = async (id: string): Promise<Incident | null> => {
 
 export const updateIncident = async (id: string, updates: UpdateIncident): Promise<void> => {
   try {
+    // Clean the data to remove undefined values before updating
+    const cleanUpdates = removeUndefinedValues(updates);
+    
     const docRef = doc(db, 'incidents', id);
     await updateDoc(docRef, {
-        ...updates,
+        ...cleanUpdates,
         updatedAt: serverTimestamp(),
     });
   } catch (error) {

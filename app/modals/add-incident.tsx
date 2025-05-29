@@ -5,15 +5,16 @@ import { useThemeColor } from '@/hooks';
 import { Alert as AlertType } from '@/types/alerts';
 import { Incident, NewIncident } from '@/types/incidents';
 import { Room } from '@/types/rooms';
-import { addIncident, getAlertsForSelector, getRoomsForSelector } from '@/utils/firebaseUtils'; // Or your IncidentService
+import { addIncident, getAlertsForSelector, getRoomsForSelector } from '@/utils/firebaseUtils';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker'; // Using Picker for simplicity
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Platform,
-    Alert as RNAlert, // Renamed to avoid conflict
+    Dimensions,
+    FlatList,
+    Modal,
+    Alert as RNAlert,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -22,6 +23,24 @@ import {
 
 // You might want to get the current user's ID/name from your auth context
 const MOCK_USER_ID = "SystemUser"; // Replace with actual user identification
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Define the severity and status options
+const SEVERITY_OPTIONS = [
+  { id: 'critical', name: 'Critical', description: 'Severe safety hazard or emergency' },
+  { id: 'high', name: 'High', description: 'Immediate attention required' },
+  { id: 'medium', name: 'Medium', description: 'Important but not urgent' },
+  { id: 'low', name: 'Low', description: 'Minor issue or concern' },
+  { id: 'info', name: 'Info', description: 'General information only' },
+];
+
+const STATUS_OPTIONS = [
+  { id: 'open', name: 'Open', description: 'Needs attention' },
+  { id: 'in_progress', name: 'In Progress', description: 'Currently being addressed' },
+  { id: 'resolved', name: 'Resolved', description: 'Issue has been fixed' },
+  { id: 'closed', name: 'Closed', description: 'No further action needed' },
+];
 
 export default function AddIncidentModal() {
   const router = useRouter();
@@ -34,40 +53,52 @@ export default function AddIncidentModal() {
   const [actionsTaken, setActionsTaken] = useState<string[]>([]);
   const [currentAction, setCurrentAction] = useState('');
 
+  // Selected display objects
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<AlertType | null>(null);
+  const [selectedSeverity, setSelectedSeverity] = useState(SEVERITY_OPTIONS.find(s => s.id === 'low') || SEVERITY_OPTIONS[3]);
+  const [selectedStatus, setSelectedStatus] = useState(STATUS_OPTIONS.find(s => s.id === 'open') || STATUS_OPTIONS[0]);
+
+  // Modal visibility states
+  const [showRoomDropdown, setShowRoomDropdown] = useState(false);
+  const [showAlertDropdown, setShowAlertDropdown] = useState(false);
+  const [showSeverityDropdown, setShowSeverityDropdown] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
   const [rooms, setRooms] = useState<Room[]>([]);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-
-  // Theme colors (adapt from your add-room.tsx or define as needed)
+  // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const inputBackgroundColor = useThemeColor({ light: '#F2F2F7', dark: '#2C2C2E' }, 'inputBackground');
   const textColor = useThemeColor({}, 'text');
   const placeholderTextColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'icon');
+  const textSecondaryColor = useThemeColor({ light: '#8E8E93', dark: '#8E8E93' }, 'tabIconDefault');
   const borderColor = useThemeColor({ light: '#E5E5EA', dark: '#38383A' }, 'borderColor');
   const tintColor = useThemeColor({}, 'tint');
   const surfaceColor = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'cardBackground');
+  const errorTextColor = useThemeColor({}, 'errorText');
+  const primaryButtonTextColor = useThemeColor({}, 'primaryButtonText');
+  const dropdownModalBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'cardBackground');
 
   const fetchRequiredData = useCallback(async () => {
     setIsDataLoading(true);
     try {
       const [fetchedRooms, fetchedAlerts] = await Promise.all([
         getRoomsForSelector(),
-        getAlertsForSelector() // You might want to filter alerts (e.g., active ones)
+        getAlertsForSelector()
       ]);
       setRooms(fetchedRooms);
       setAlerts(fetchedAlerts);
-      if (fetchedRooms.length > 0 && !roomId) { // Pre-select first room if none selected
-        // setRoomId(fetchedRooms[0].id);
-      }
     } catch (error) {
       console.error("Error fetching data for modal:", error);
       RNAlert.alert("Error", "Could not load necessary data. Please try again.");
     } finally {
       setIsDataLoading(false);
     }
-  }, [roomId]); // Added roomId to ensure it can set default if needed
+  }, []);
 
   useEffect(() => {
     fetchRequiredData();
@@ -95,22 +126,22 @@ export default function AddIncidentModal() {
         title,
         description,
         roomId,
-        roomName: rooms.find(r => r.id === roomId)?.name, // Denormalize room name
-        alertId: alertId || undefined, // Ensure it's undefined if not selected
-        reportedBy: MOCK_USER_ID, // Replace with actual user data
+        roomName: selectedRoom?.name,
+        alertId: alertId || undefined,
+        reportedBy: MOCK_USER_ID,
         status,
         severity,
         actionsTaken: actionsTaken.length > 0 ? actionsTaken : undefined,
       };
 
-      await addIncident(incidentData);      RNAlert.alert(
+      await addIncident(incidentData);
+      RNAlert.alert(
         "Incident Reported",
         `Incident "${title}" has been successfully reported.`,
         [{
           text: "OK",
           onPress: () => {
             setIsLoading(false);
-            // Adding small delay for modal to properly close before navigation potentially re-renders list
             requestAnimationFrame(() => {
                 if (router.canGoBack()) router.back();
                 else router.dismiss();
@@ -124,6 +155,65 @@ export default function AddIncidentModal() {
       setIsLoading(false);
     }
   };
+
+  // Render functions for dropdowns
+  const renderRoomItem = ({ item }: { item: Room }) => (
+    <TouchableOpacity
+      style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
+      onPress={() => {
+        setSelectedRoom(item);
+        setRoomId(item.id);
+        setShowRoomDropdown(false);
+      }}
+    >
+      <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
+      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.location}</ThemedText>
+    </TouchableOpacity>
+  );
+
+  const renderAlertItem = ({ item }: { item: AlertType }) => (
+    <TouchableOpacity
+      style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
+      onPress={() => {
+        setSelectedAlert(item);
+        setAlertId(item.id);
+        setShowAlertDropdown(false);
+      }}
+    >
+      <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.type}</ThemedText>
+      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>
+        {new Date(item.timestamp).toLocaleString()}
+      </ThemedText>
+    </TouchableOpacity>
+  );
+
+  const renderSeverityItem = ({ item }: { item: typeof SEVERITY_OPTIONS[0] }) => (
+    <TouchableOpacity
+      style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
+      onPress={() => {
+        setSelectedSeverity(item);
+        setSeverity(item.id as Incident['severity']);
+        setShowSeverityDropdown(false);
+      }}
+    >
+      <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
+      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.description}</ThemedText>
+    </TouchableOpacity>
+  );
+
+  const renderStatusItem = ({ item }: { item: typeof STATUS_OPTIONS[0] }) => (
+    <TouchableOpacity
+      style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
+      onPress={() => {
+        setSelectedStatus(item);
+        setStatus(item.id as Incident['status']);
+        setShowStatusDropdown(false);
+      }}
+    >
+      <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
+      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.description}</ThemedText>
+    </TouchableOpacity>
+  );
 
   if (isDataLoading) {
     return (
@@ -144,8 +234,14 @@ export default function AddIncidentModal() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Incident Information Section */}
-        <Section icon="information-circle-outline" title="Incident Details">
-          <InputGroup label="Title">
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="information-circle-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Incident Details</ThemedText>
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Title</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
               placeholder="e.g., Chemical Spill, Equipment Failure"
@@ -153,8 +249,10 @@ export default function AddIncidentModal() {
               onChangeText={setTitle}
               placeholderTextColor={placeholderTextColor}
             />
-          </InputGroup>
-          <InputGroup label="Description">
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Description</ThemedText>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
               placeholder="Provide a detailed description of the incident..."
@@ -164,92 +262,150 @@ export default function AddIncidentModal() {
               multiline
               numberOfLines={4}
             />
-          </InputGroup>
-        </Section>
+          </ThemedView>
+        </ThemedView>
 
         {/* Association Section */}
-        <Section icon="link-outline" title="Associations">
-          <InputGroup label="Room (Required)">
-             <PickerWrapper borderColor={borderColor} backgroundColor={inputBackgroundColor}>                <Picker
-                selectedValue={roomId}
-                onValueChange={(itemValue: string) => setRoomId(itemValue || undefined)}
-                style={[styles.picker, { color: textColor, backgroundColor: 'transparent' }]}
-                dropdownIconColor={textColor}
-                prompt="Select a Room"
-                >
-                <Picker.Item label="Select a Room..." value={undefined} style={{color: placeholderTextColor}} />
-                {rooms.map(room => (
-                    <Picker.Item key={room.id} label={room.name} value={room.id} style={{color: textColor}} />
-                ))}
-                </Picker>
-            </PickerWrapper>
-          </InputGroup>
-          <InputGroup label="Related Alert (Optional)">
-             <PickerWrapper borderColor={borderColor} backgroundColor={inputBackgroundColor}>                <Picker
-                selectedValue={alertId}
-                onValueChange={(itemValue: string) => setAlertId(itemValue || undefined)}
-                style={[styles.picker, { color: textColor, backgroundColor: 'transparent' }]}
-                dropdownIconColor={textColor}
-                prompt="Select an Alert"
-                >
-                <Picker.Item label="Select a Related Alert (Optional)..." value={undefined} style={{color: placeholderTextColor}}/>
-                {alerts.map(alert => (
-                    <Picker.Item key={alert.id} label={`${alert.type} - ${new Date(alert.timestamp).toLocaleTimeString()}`} value={alert.id} style={{color: textColor}}/>
-                ))}
-                </Picker>
-            </PickerWrapper>
-          </InputGroup>
-        </Section>
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="link-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Associations</ThemedText>
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Room (Required)</ThemedText>
+            <TouchableOpacity
+              style={[styles.dropdown, { 
+                backgroundColor: inputBackgroundColor, 
+                borderColor: borderColor 
+              }]}
+              onPress={() => setShowRoomDropdown(true)}
+            >
+              {selectedRoom ? (
+                <ThemedView style={styles.selectedContent}>
+                  <ThemedText style={[styles.selectedText, { color: textColor }]}>
+                    {selectedRoom.name}
+                  </ThemedText>
+                  <ThemedText style={[styles.selectedSubtext, { color: textSecondaryColor }]}>
+                    {selectedRoom.location}
+                  </ThemedText>
+                </ThemedView>
+              ) : (
+                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                  Select Room (Required)
+                </ThemedText>
+              )}
+              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+            </TouchableOpacity>
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Related Alert (Optional)</ThemedText>
+            <TouchableOpacity
+              style={[styles.dropdown, { 
+                backgroundColor: inputBackgroundColor, 
+                borderColor: borderColor 
+              }]}
+              onPress={() => setShowAlertDropdown(true)}
+            >
+              {selectedAlert ? (
+                <ThemedView style={styles.selectedContent}>
+                  <ThemedText style={[styles.selectedText, { color: textColor }]}>
+                    {selectedAlert.type}
+                  </ThemedText>
+                  <ThemedText style={[styles.selectedSubtext, { color: textSecondaryColor }]}>
+                    {new Date(selectedAlert.timestamp).toLocaleString()}
+                  </ThemedText>
+                </ThemedView>
+              ) : (
+                <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
+                  Select Related Alert (Optional)
+                </ThemedText>
+              )}
+              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedView>
 
         {/* Status & Severity Section */}
-        <Section icon="options-outline" title="Status & Severity">
-            <InputGroup label="Status">
-                <PickerWrapper borderColor={borderColor} backgroundColor={inputBackgroundColor}>
-                    <Picker selectedValue={status} onValueChange={(itemValue: Incident['status']) => setStatus(itemValue)} style={[styles.picker, { color: textColor }]}>
-                        <Picker.Item label="Open" value="open" />
-                        <Picker.Item label="In Progress" value="in_progress" />
-                        <Picker.Item label="Resolved" value="resolved" />
-                        <Picker.Item label="Closed" value="closed" />
-                    </Picker>
-                </PickerWrapper>
-            </InputGroup>
-            <InputGroup label="Severity">
-                <PickerWrapper borderColor={borderColor} backgroundColor={inputBackgroundColor}>
-                    <Picker selectedValue={severity} onValueChange={(itemValue: Incident['severity']) => setSeverity(itemValue)} style={[styles.picker, { color: textColor }]}>
-                        <Picker.Item label="Critical" value="critical" />
-                        <Picker.Item label="High" value="high" />
-                        <Picker.Item label="Medium" value="medium" />
-                        <Picker.Item label="Low" value="low" />
-                        <Picker.Item label="Info" value="info" />
-                    </Picker>
-                </PickerWrapper>
-            </InputGroup>
-        </Section>
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="options-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Status & Severity</ThemedText>
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Status</ThemedText>
+            <TouchableOpacity
+              style={[styles.dropdown, { 
+                backgroundColor: inputBackgroundColor, 
+                borderColor: borderColor 
+              }]}
+              onPress={() => setShowStatusDropdown(true)}
+            >
+              <ThemedView style={styles.selectedContent}>
+                <ThemedText style={[styles.selectedText, { color: textColor }]}>
+                  {selectedStatus.name}
+                </ThemedText>
+                <ThemedText style={[styles.selectedSubtext, { color: textSecondaryColor }]}>
+                  {selectedStatus.description}
+                </ThemedText>
+              </ThemedView>
+              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+            </TouchableOpacity>
+          </ThemedView>
+          
+          <ThemedView style={styles.inputGroup}>
+            <ThemedText style={[styles.inputLabel, { color: textColor }]}>Severity</ThemedText>
+            <TouchableOpacity
+              style={[styles.dropdown, { 
+                backgroundColor: inputBackgroundColor, 
+                borderColor: borderColor 
+              }]}
+              onPress={() => setShowSeverityDropdown(true)}
+            >
+              <ThemedView style={styles.selectedContent}>
+                <ThemedText style={[styles.selectedText, { color: textColor }]}>
+                  {selectedSeverity.name}
+                </ThemedText>
+                <ThemedText style={[styles.selectedSubtext, { color: textSecondaryColor }]}>
+                  {selectedSeverity.description}
+                </ThemedText>
+              </ThemedView>
+              <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedView>
 
         {/* Actions Taken Section */}
-        <Section icon="construct-outline" title="Actions Taken (Optional)">
-            {actionsTaken.map((action, index) => (
-                <ThemedView key={index} style={[styles.actionItemContainer, {borderColor}]}>
-                    <ThemedText style={[styles.actionText, {color: textColor}]}>{action}</ThemedText>
-                    <TouchableOpacity onPress={() => handleRemoveAction(index)}>
-                        <Ionicons name="trash-bin-outline" size={20} color={useThemeColor({}, 'errorText')} />
-                    </TouchableOpacity>
-                </ThemedView>
-            ))}
-            <ThemedView style={styles.inputRow}>
-                <TextInput
-                    style={[styles.input, styles.actionInput, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
-                    placeholder="Describe an action taken"
-                    value={currentAction}
-                    onChangeText={setCurrentAction}
-                    placeholderTextColor={placeholderTextColor}
-                />
-                <TouchableOpacity style={[styles.addButtonSmall, {backgroundColor: tintColor}]} onPress={handleAddAction}>
-                    <Ionicons name="add-outline" size={20} color={useThemeColor({}, 'primaryButtonText')} />
-                </TouchableOpacity>
+        <ThemedView style={[styles.section]}>
+          <ThemedView style={styles.sectionHeader}>
+            <Ionicons name="construct-outline" size={20} color={tintColor} />
+            <ThemedText style={[styles.sectionTitle, { color: textColor }]}>Actions Taken (Optional)</ThemedText>
+          </ThemedView>
+          
+          {actionsTaken.map((action, index) => (
+            <ThemedView key={index} style={[styles.actionItemContainer, {borderColor}]}>
+              <ThemedText style={[styles.actionText, {color: textColor}]}>{action}</ThemedText>
+              <TouchableOpacity onPress={() => handleRemoveAction(index)}>
+                <Ionicons name="trash-bin-outline" size={20} color={errorTextColor} />
+              </TouchableOpacity>
             </ThemedView>
-        </Section>
-
+          ))}
+          
+          <ThemedView style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.actionInput, { backgroundColor: inputBackgroundColor, color: textColor, borderColor }]}
+              placeholder="Describe an action taken"
+              value={currentAction}
+              onChangeText={setCurrentAction}
+              placeholderTextColor={placeholderTextColor}
+            />
+            <TouchableOpacity style={[styles.addButtonSmall, {backgroundColor: tintColor}]} onPress={handleAddAction}>
+              <Ionicons name="add-outline" size={20} color={primaryButtonTextColor} />
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedView>
       </ScrollView>
 
       {/* Bottom Action */}
@@ -270,42 +426,128 @@ export default function AddIncidentModal() {
           </TouchableOpacity>
         )}
       </ThemedView>
+
+      {/* Room Selection Modal */}
+      <Modal
+        visible={showRoomDropdown}
+        transparent={true}
+        animationType="slide" 
+        onRequestClose={() => setShowRoomDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setShowRoomDropdown(false)} 
+        >
+          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor }]}>
+            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select Room</ThemedText>
+            </ThemedView>
+            <FlatList
+              data={rooms}
+              renderItem={renderRoomItem}
+              keyExtractor={(item) => item.id}
+              style={styles.dropdownList}
+              showsVerticalScrollIndicator={false}
+            />
+          </ThemedView>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Alert Selection Modal */}
+      <Modal
+        visible={showAlertDropdown}
+        transparent={true}
+        animationType="slide" 
+        onRequestClose={() => setShowAlertDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setShowAlertDropdown(false)} 
+        >
+          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor }]}>
+            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select Alert</ThemedText>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setSelectedAlert(null);
+                  setAlertId(undefined);
+                  setShowAlertDropdown(false);
+                }}
+              >
+                <ThemedText style={[styles.clearButtonText, { color: tintColor }]}>Clear</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+            <FlatList
+              data={alerts}
+              renderItem={renderAlertItem}
+              keyExtractor={(item) => item.id}
+              style={styles.dropdownList}
+              showsVerticalScrollIndicator={false}
+            />
+          </ThemedView>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Severity Selection Modal */}
+      <Modal
+        visible={showSeverityDropdown}
+        transparent={true}
+        animationType="slide" 
+        onRequestClose={() => setShowSeverityDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setShowSeverityDropdown(false)} 
+        >
+          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor }]}>
+            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select Severity</ThemedText>
+            </ThemedView>
+            <FlatList
+              data={SEVERITY_OPTIONS}
+              renderItem={renderSeverityItem}
+              keyExtractor={(item) => item.id}
+              style={styles.dropdownList}
+              showsVerticalScrollIndicator={false}
+            />
+          </ThemedView>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Status Selection Modal */}
+      <Modal
+        visible={showStatusDropdown}
+        transparent={true}
+        animationType="slide" 
+        onRequestClose={() => setShowStatusDropdown(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setShowStatusDropdown(false)} 
+        >
+          <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor }]}>
+            <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select Status</ThemedText>
+            </ThemedView>
+            <FlatList
+              data={STATUS_OPTIONS}
+              renderItem={renderStatusItem}
+              keyExtractor={(item) => item.id}
+              style={styles.dropdownList}
+              showsVerticalScrollIndicator={false}
+            />
+          </ThemedView>
+        </TouchableOpacity>
+      </Modal>
     </ThemedView>
   );
 }
 
-// Helper components for styling consistency
-const Section: React.FC<React.PropsWithChildren<{ icon: keyof typeof Ionicons.glyphMap; title: string }>> = ({ icon, title, children }) => {
-  const tintColor = useThemeColor({}, 'tint');
-  const textColor = useThemeColor({}, 'text');
-  return (
-    <ThemedView style={styles.section}>
-      <ThemedView style={styles.sectionHeader}>
-        <Ionicons name={icon} size={20} color={tintColor} />
-        <ThemedText style={[styles.sectionTitle, { color: textColor }]}>{title}</ThemedText>
-      </ThemedView>
-      {children}
-    </ThemedView>
-  );
-};
-
-const InputGroup: React.FC<React.PropsWithChildren<{ label: string }>> = ({ label, children }) => {
-  const textColor = useThemeColor({}, 'text');
-  return (
-    <ThemedView style={styles.inputGroup}>
-      <ThemedText style={[styles.inputLabel, { color: textColor }]}>{label}</ThemedText>
-      {children}
-    </ThemedView>
-  );
-};
-
-const PickerWrapper: React.FC<React.PropsWithChildren<{borderColor: string, backgroundColor: string}>> = ({children, borderColor, backgroundColor}) => (
-    <ThemedView style={[styles.pickerContainer, {borderColor, backgroundColor}]}>
-        {children}
-    </ThemedView>
-);
-
-// Styles (adapt from your add-room.tsx and refine)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -317,6 +559,8 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
     gap: Layout.spacing.xl,
   },
+  
+  // Sections
   section: {
     backgroundColor: 'transparent',
   },
@@ -332,6 +576,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
     fontWeight: Layout.fontWeight.semibold,
   },
+  
+  // Input Groups
   inputGroup: {
     marginBottom: Layout.spacing.lg,
     backgroundColor: 'transparent',
@@ -343,30 +589,51 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.sm,
   },
   input: {
-    minHeight: 52, // For single line inputs
+    minHeight: 52,
     borderWidth: 1,
     borderRadius: Layout.borderRadius.lg,
     paddingHorizontal: Layout.spacing.lg,
-    paddingVertical: Layout.spacing.md, // Added for better text centering
+    paddingVertical: Layout.spacing.md,
     fontSize: Layout.fontSize.md,
     fontFamily: 'Montserrat-Regular',
   },
   textArea: {
-    minHeight: 100, // For multiline
-    textAlignVertical: 'top', // Align text to top for multiline
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
-  pickerContainer: {
-    height: 52,
+  
+  // Dropdown (for selection fields)
+  dropdown: {
+    minHeight: 52,
     borderWidth: 1,
     borderRadius: Layout.borderRadius.lg,
-    justifyContent: 'center', // Center picker content vertically
-    paddingHorizontal: Platform.OS === 'ios' ? Layout.spacing.lg : 0, // iOS needs padding here
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  picker: {
-    height: '100%',
-    width: '100%',
-    // backgroundColor: 'transparent', // ensure picker itself is transparent
+  selectedContent: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
+  selectedText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  selectedSubtext: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 2,
+  },
+  dropdownPlaceholder: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+    flex: 1,
+  },
+  
+  // Action items
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,6 +667,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: Layout.spacing.sm,
   },
+  
+  // Bottom Action (Button area)
   bottomAction: {
     padding: Layout.spacing.lg,
     paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10),
@@ -428,5 +697,56 @@ const styles = StyleSheet.create({
     fontSize: Layout.fontSize.md,
     fontFamily: 'Montserrat-SemiBold',
     fontWeight: Layout.fontWeight.semibold,
+  },
+  
+  // Modal for Dropdowns
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  dropdownModal: {
+    maxHeight: SCREEN_WIDTH,
+    borderTopLeftRadius: Layout.borderRadius.lg,
+    borderTopRightRadius: Layout.borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Layout.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
+  },
+  dropdownTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: Layout.fontWeight.semibold,
+  },
+  clearButton: {
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+  },
+  clearButtonText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  dropdownList: {
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    padding: Layout.spacing.lg,
+  },
+  dropdownItemText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  dropdownItemSubtext: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 2,
   },
 });
