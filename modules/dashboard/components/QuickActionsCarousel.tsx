@@ -1,8 +1,9 @@
+// labwatch-app/modules/dashboard/components/QuickActionsCarousel.tsx
 import SectionHeader from '@/components/SectionHeader';
 import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import Layout from '@/constants/Layout';
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
+import { useCurrentTheme } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -10,45 +11,53 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface QuickAction {
   label: string;
-  iconName: keyof typeof Ionicons.glyphMap;
+  iconName: keyof typeof Ionicons.glyphMap; // Already correct from Ionicons
   route?: string;
   backgroundColor?: string;
   onPress?: () => void;
   priority?: 'high' | 'medium' | 'low';
 }
 
-const QuickActionCard: React.FC<QuickAction & { themeColors: typeof Colors.light }> = ({
+// Forward ref for TouchableOpacity if used with Animated or other HOCs
+const QuickActionCard: React.FC<QuickAction & { currentThemeColors: any }> = ({
   label,
   iconName,
   backgroundColor,
   onPress,
-  themeColors,
+  currentThemeColors, // Renamed to avoid conflict if useThemeColor is used inside
   priority = 'medium',
 }) => {
-  const defaultBgColor = useThemeColor({}, 'cardBackground');
-  const borderColor = useThemeColor({}, 'borderColor');
-  const textColor = useThemeColor({}, 'text');
-  const iconColor = backgroundColor ? '#FFFFFF' : useThemeColor({}, 'tint');
+  // If specific theme colors needed here, use useThemeColor hook
+  // For simplicity, using passed currentThemeColors
+  const defaultBgColor = currentThemeColors.cardBackground;
+  const borderColor = currentThemeColors.borderColor;
+  const textColor = currentThemeColors.text;
+  const iconColorForCard = backgroundColor ? '#FFFFFF' : currentThemeColors.tint;
 
   const getPriorityStyles = () => {
     switch (priority) {
       case 'high':
         return {
-          borderWidth: 2,
-          borderColor: themeColors.errorText,
-          shadowColor: themeColors.errorText,
-          shadowOpacity: 0.2,
+          borderWidth: 1.5, // Slightly thicker for high priority
+          borderColor: currentThemeColors.errorText,
+          // shadowColor: currentThemeColors.errorText, // Card handles general shadow
+          // shadowOpacity: 0.2,
         };
       case 'medium':
         return {
-          borderWidth: 1,
+          borderWidth: StyleSheet.hairlineWidth,
           borderColor: borderColor,
         };
       case 'low':
         return {
-          borderWidth: 1,
+          borderWidth: StyleSheet.hairlineWidth,
           borderColor: borderColor,
-          opacity: 0.8,
+          opacity: 0.85, // Slightly less opacity for low priority
+        };
+      default:
+        return {
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: borderColor,
         };
     }
   };
@@ -60,18 +69,27 @@ const QuickActionCard: React.FC<QuickAction & { themeColors: typeof Colors.light
         styles.quickActionCard,
         { backgroundColor: backgroundColor || defaultBgColor },
         getPriorityStyles(),
+        // Layout.cardShadow, // Apply consistent shadow, or let Card component (if wrapped) do it
       ]}
       activeOpacity={0.8}
     >
-      <ThemedView style={[styles.iconContainer, { backgroundColor: backgroundColor ? 'rgba(255,255,255,0.2)' : themeColors.tint + '15' }]}>
-        <Ionicons name={iconName} size={24} color={iconColor} />
+      <ThemedView 
+        style={[
+            styles.iconContainer, 
+            { backgroundColor: backgroundColor ? 'rgba(255,255,255,0.2)' : currentThemeColors.tint + '15' }
+        ]}
+      >
+        <Ionicons name={iconName} size={28} color={iconColorForCard} />
       </ThemedView>
-      <ThemedText style={[styles.quickActionLabel, { color: backgroundColor ? '#FFFFFF' : textColor }]}>
+      <ThemedText 
+        style={[styles.quickActionLabel, { color: backgroundColor ? '#FFFFFF' : textColor }]}
+        numberOfLines={2} // Allow for slightly longer labels
+      >
         {label}
       </ThemedText>
       {priority === 'high' && (
-        <ThemedView style={[styles.priorityBadge, { backgroundColor: themeColors.errorText }]}>
-          <Ionicons name="warning" size={12} color="#FFFFFF" />
+        <ThemedView style={[styles.priorityBadge, { backgroundColor: currentThemeColors.errorText }]}>
+          <Ionicons name="flag" size={10} color="#FFFFFF" />
         </ThemedView>
       )}
     </TouchableOpacity>
@@ -79,15 +97,15 @@ const QuickActionCard: React.FC<QuickAction & { themeColors: typeof Colors.light
 };
 
 const QuickActionsCarousel = () => {
-  const router = useRouter();
-  const currentTheme = useCurrentTheme();
-  const themeColors = Colors[currentTheme];
+  const router = useRouter(); // Correct hook import
+  const currentThemeHook = useCurrentTheme(); // Correct hook import
+  const currentThemeColors = Colors[currentThemeHook];
 
   const quickActions: QuickAction[] = [
     { 
       label: "Report Incident", 
-      iconName: "medkit-outline", 
-      backgroundColor: themeColors.errorText, 
+      iconName: "alert-circle-outline", // More indicative of an incident
+      backgroundColor: currentThemeColors.errorText, 
       priority: 'high',
       onPress: () => router.push('/(tabs)/more/incidents') 
     },
@@ -97,33 +115,40 @@ const QuickActionsCarousel = () => {
       priority: 'medium',
       onPress: () => router.push('/(tabs)/more/protocols') 
     },
-    { 
-      label: "Settings", 
-      iconName: "settings-outline", 
-      priority: 'low',
-      onPress: () => router.push('/(tabs)/more/settings') 
+     { 
+      label: "Add New Room", 
+      iconName: "add-circle-outline", 
+      priority: 'medium',
+      onPress: () => router.push('/modals/add-room') // Example route
     },
     { 
-      label: "Manage Users", 
-      iconName: "shield-checkmark-outline", 
+      label: "User Settings", // More specific
+      iconName: "person-circle-outline", 
       priority: 'low',
-      onPress: () => router.push('/(tabs)/more/admin/manage-users') 
+      onPress: () => router.push('/profile') // Example route to a user profile/settings
     },
+    // { 
+    //   label: "Manage Users", // This might be admin-specific
+    //   iconName: "people-outline", 
+    //   priority: 'low',
+    //   onPress: () => router.push('/(tabs)/more/admin/manage-users') 
+    // },
   ];
 
   return (
     <View style={styles.container}>
       <SectionHeader 
-        title="Quick Actions" 
+        title="Quick Actions"
+        // SectionHeader's internal padding will be respected by sectionWrapper
       />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
-        style={styles.scrollView}
+        // style={styles.scrollView} // Removed to let sectionWrapper handle outer padding
       >
         {quickActions.map((action) => (
-          <QuickActionCard key={action.label} {...action} themeColors={themeColors} />
+          <QuickActionCard key={action.label} {...action} currentThemeColors={currentThemeColors} />
         ))}
       </ScrollView>
     </View>
@@ -132,47 +157,54 @@ const QuickActionsCarousel = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.md, // Use sectionWrapper's padding
+    // marginBottom is handled by spacers in dashboard.tsx.
   },
-  scrollView: {
-    marginHorizontal: -Layout.spacing.md,
-  },
+  // scrollView style removed
   scrollContainer: {
-    paddingHorizontal: Layout.spacing.md,
-    paddingVertical: Layout.spacing.xs,
+    // This padding is for the content *inside* the scroll view.
+    // If sectionWrapper provides Layout.spacing.md, and SectionHeader also has padding,
+    // this ensures items don't touch the edges of the scrollable area if it's visually distinct.
+    // For a seamless look with sectionWrapper, this could be { paddingLeft: 0 } if SectionHeader manages its own padding.
+    // Or, if SectionHeader also uses Layout.spacing.md, this can be removed or set to a smaller value for internal item start.
+    // For simplicity, let items start at the edge of the scrollview, which is padded by sectionWrapper.
+    paddingLeft: 0, // First item will align with sectionWrapper padding
+    paddingRight: Layout.spacing.md, // Ensure last item has space if it scrolls
+    paddingVertical: Layout.spacing.xs, // Small vertical padding for the scroll area
   },
   quickActionCard: {
-    width: 140,
-    height: 120,
+    width: 130, // Slightly reduced width
+    height: 110, // Slightly reduced height
     borderRadius: Layout.borderRadius.lg,
-    padding: Layout.spacing.md,
-    marginRight: Layout.spacing.md,
+    padding: Layout.spacing.sm, // Reduced padding
+    marginRight: Layout.spacing.sm, // Reduced margin for tighter packing
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-around', // Better distribution
     position: 'relative',
-    ...Layout.cardShadow,
+    ...Layout.cardShadow, // Apply consistent shadow
+    // borderWidth and borderColor handled by getPriorityStyles
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: Layout.borderRadius.lg,
+    width: 44, // Slightly smaller
+    height: 44, // Slightly smaller
+    borderRadius: Layout.borderRadius.md, // Consistent with other icon containers
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Layout.spacing.sm,
+    marginBottom: Layout.spacing.xs,
   },
   quickActionLabel: {
-    fontSize: Layout.fontSize.sm,
+    fontSize: Layout.fontSize.xs, // Smaller font for compact cards
     fontFamily: 'Montserrat-SemiBold',
     textAlign: 'center',
-    lineHeight: Layout.fontSize.sm * 1.3,
+    lineHeight: Layout.fontSize.xs * 1.3,
   },
   priorityBadge: {
     position: 'absolute',
     top: Layout.spacing.xs,
     right: Layout.spacing.xs,
-    width: 20,
-    height: 20,
-    borderRadius: Layout.borderRadius.sm,
+    width: 18, // Smaller badge
+    height: 18, // Smaller badge
+    borderRadius: Layout.borderRadius.sm, // Smaller radius
     justifyContent: 'center',
     alignItems: 'center',
   },

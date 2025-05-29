@@ -1,6 +1,6 @@
 // app/(tabs)/rooms/[roomId].tsx
 import Card from '@/components/Card';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed'; // Ensure ThemedView is imported
+import { Text as ThemedText, View as ThemedView, View } from '@/components/Themed';
 import DialGauge from '@/components/ui/DialGauge';
 import HeatmapGrid from '@/components/ui/HeatmapGrid';
 import { Colors } from '@/constants/Colors';
@@ -38,10 +38,10 @@ export default function RoomDetailScreen() {
   const tintColor = useThemeColor({}, 'tint');
   const errorColor = useThemeColor({}, 'errorText');
   const successColor = useThemeColor({}, 'successText');
+  const warningColor = useThemeColor({}, 'warningText');
   const cardContentWidth = Layout.window.width - (Layout.spacing.md * 2) - (Layout.spacing.lg * 2);
   const dialGaugeSize = Math.max(110, cardContentWidth / 2 - Layout.spacing.md * 2.5);
   const primaryButtonTextColor = useThemeColor({light: themeColors.cardBackground, dark: themeColors.text}, 'primaryButtonText');
-
 
   useEffect(() => {
     if (!roomId) return;
@@ -133,11 +133,11 @@ export default function RoomDetailScreen() {
         </ThemedText>
          {/* Using a custom TouchableOpacity as AppButton was removed by request */}
         <TouchableOpacity
-            style={[styles.customButton, {backgroundColor: tintColor}]}
+            style={[styles.primaryButton, {backgroundColor: tintColor}]}
             onPress={() => router.back()}
             activeOpacity={0.7}
         >
-            <ThemedText style={[styles.customButtonText, {color: primaryButtonTextColor}]}>Go Back</ThemedText>
+            <ThemedText style={[styles.primaryButtonText, {color: primaryButtonTextColor}]}>Go Back</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     );
@@ -148,331 +148,528 @@ export default function RoomDetailScreen() {
   const thermalData = sensorData?.thermalImager as ThermalImagerData | undefined;
   const vibrationData = sensorData?.vibration as VibrationData | undefined;
 
+  if (isLoading && !refreshing) {
+    return (
+      <ThemedView style={[styles.centered, { backgroundColor: containerBackgroundColor }]}>
+        <ActivityIndicator size="large" color={tintColor} />
+        <ThemedText style={[styles.loadingText, { color: textColor }]}>
+          Loading room details...
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!room) {
+    return (
+      <ThemedView style={[styles.centered, { backgroundColor: containerBackgroundColor }]}>
+        <Ionicons name="warning-outline" size={64} color={errorColor} />
+        <ThemedText style={[styles.errorTitle, { color: errorColor }]}>
+          Room Not Found
+        </ThemedText>
+        <ThemedText style={[styles.errorText, { color: textColor }]}>
+          This room may have been archived or deleted.
+        </ThemedText>
+        <TouchableOpacity
+          style={[styles.primaryButton, { backgroundColor: tintColor }]}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="arrow-back" size={20} color={primaryButtonTextColor} style={styles.buttonIcon} />
+          <ThemedText style={[styles.primaryButtonText, { color: primaryButtonTextColor }]}>
+            Go Back
+          </ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: room?.name || 'Room Details' }} />
       <ScrollView
-        style={[styles.scrollViewContainer, { backgroundColor: containerBackgroundColor }]}
+        style={[styles.container, { backgroundColor: containerBackgroundColor }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tintColor} />}
-        contentContainerStyle={styles.scrollContentContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ThemedView style={styles.container}> {/* Use ThemedView */}
-          <Card style={styles.detailsCard}>
-            <ThemedText style={[styles.roomName, { color: textColor }]}>{room.name}</ThemedText>
-            <ThemedView style={styles.metaItem}> {/* Use ThemedView */}
-              <Ionicons name="location-sharp" size={18} color={subtleTextColor} style={styles.metaIcon} />
-              <ThemedText style={[styles.locationText, { color: subtleTextColor }]}>{room.location}</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.metaItem}> {/* Use ThemedView */}
-              <Ionicons name={room.isMonitored ? "shield-checkmark" : "shield-outline"} size={18} color={room.isMonitored ? successColor : errorColor} style={styles.metaIcon} />
-              <ThemedText style={[styles.monitoredText, { color: room.isMonitored ? successColor : errorColor }]}>
-                {room.isMonitored ? "Actively Monitored" : "Monitoring Paused"}
+        {/* Room Info Header Card */}
+        <Card style={styles.headerCard}>
+          <View style={styles.roomHeader}>
+            <View style={styles.roomTitleSection}>
+              <ThemedText style={[styles.roomName, { color: textColor }]}>
+                {room.name}
               </ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.actionsContainer}>
-                <TouchableOpacity
-                    style={[styles.customButton, {backgroundColor: tintColor}]}
-                    onPress={handleEditRoom}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="pencil-outline" size={18} color={primaryButtonTextColor} style={styles.customButtonIcon} />
-                    <ThemedText style={[styles.customButtonText, {color: primaryButtonTextColor}]}>Edit</ThemedText>
-                </TouchableOpacity>
-                 <TouchableOpacity
-                    style={[styles.customButton, styles.customButtonOutline, {borderColor: errorColor}]}
-                    onPress={handleArchiveRoom}
-                    disabled={isArchiving}
-                    activeOpacity={0.7}
-                >
-                  {isArchiving ? (
-                    <ActivityIndicator size="small" color={errorColor} />
-                  ) : (
-                    <>
-                      <Ionicons name="archive-outline" size={18} color={errorColor} style={styles.customButtonIcon} />
-                      <ThemedText style={[styles.customButtonText, {color: errorColor}]}>Archive</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-            </ThemedView>
-          </Card>
+              <View style={styles.statusBadge}>
+                <Ionicons 
+                  name={room.isMonitored ? "shield-checkmark" : "shield-outline"} 
+                  size={16} 
+                  color={room.isMonitored ? successColor : warningColor} 
+                />
+                <ThemedText style={[
+                  styles.statusText, 
+                  { color: room.isMonitored ? successColor : warningColor }
+                ]}>
+                  {room.isMonitored ? "MONITORING" : "PAUSED"}
+                </ThemedText>
+              </View>
+            </View>
 
-          <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor, borderBottomColor: cardBorderColor }]}>
+            <View style={styles.roomMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={16} color={subtleTextColor} />
+                <ThemedText style={[styles.metaText, { color: subtleTextColor }]}>
+                  {room.location}
+                </ThemedText>
+              </View>
+              {room.esp32ModuleName && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="hardware-chip-outline" size={16} color={subtleTextColor} />
+                  <ThemedText style={[styles.metaText, { color: subtleTextColor }]}>
+                    {room.esp32ModuleName}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: tintColor + '15', borderColor: tintColor }]}
+                onPress={handleEditRoom}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="pencil-outline" size={18} color={tintColor} />
+                <ThemedText style={[styles.actionButtonText, { color: tintColor }]}>
+                  Edit
+                </ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: errorColor + '15', borderColor: errorColor }]}
+                onPress={handleArchiveRoom}
+                disabled={isArchiving}
+                activeOpacity={0.7}
+              >
+                {isArchiving ? (
+                  <ActivityIndicator size="small" color={errorColor} />
+                ) : (
+                  <>
+                    <Ionicons name="archive-outline" size={18} color={errorColor} />
+                    <ThemedText style={[styles.actionButtonText, { color: errorColor }]}>
+                      Archive
+                    </ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Card>
+
+        {/* Sensor Data Section */}
+        <View style={styles.sectionHeader}>
+          <Ionicons name="analytics-outline" size={24} color={sectionTitleColor} />
+          <ThemedText style={[styles.sectionTitle, { color: sectionTitleColor }]}>
             Live Sensor Data
           </ThemedText>
+        </View>
 
-          {(!sensorData && !isLoading && !refreshing) && (
-            <Card><ThemedText style={{color: textColor, textAlign: 'center', padding: Layout.spacing.md, fontFamily: 'Montserrat-Regular'}}>No sensor data currently available.</ThemedText></Card>
-          )}
-          {(isLoading && !refreshing && !sensorData && room && !room.isArchived) && (
-            <ThemedView style={[styles.centered, {minHeight: 200, paddingVertical: Layout.spacing.xl}]}>
-                <ActivityIndicator size="large" color={tintColor} />
-                <ThemedText style={{ color: textColor, marginTop: Layout.spacing.md, fontFamily: 'Montserrat-Regular' }}>Loading sensor data...</ThemedText>
-            </ThemedView>
-           )}
+        {!sensorData && !isLoading && !refreshing && (
+          <Card style={styles.emptyStateCard}>
+            <Ionicons name="radio-outline" size={48} color={subtleTextColor} />
+            <ThemedText style={[styles.emptyStateTitle, { color: textColor }]}>
+              No Sensor Data
+            </ThemedText>
+            <ThemedText style={[styles.emptyStateText, { color: subtleTextColor }]}>
+              No sensor data is currently available for this room.
+            </ThemedText>
+          </Card>
+        )}
 
-          {(tempHumidity || airQuality) && (
-            <Card>
-              <ThemedText style={[styles.subSectionTitle, { color: sectionTitleColor }]}>
+        {isLoading && !refreshing && !sensorData && room && !room.isArchived && (
+          <Card style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={tintColor} />
+            <ThemedText style={[styles.loadingText, { color: textColor }]}>
+              Loading sensor data...
+            </ThemedText>
+          </Card>
+        )}
+
+        {/* Environmental Data */}
+        {(tempHumidity || airQuality) && (
+          <Card style={styles.sensorCard}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="leaf-outline" size={20} color={successColor} />
+              <ThemedText style={[styles.cardTitle, { color: textColor }]}>
                 Environmental
               </ThemedText>
-              <ThemedView style={styles.gaugesGrid}> {/* Use ThemedView */}
-                {tempHumidity && (
-                  <DialGauge 
-                    value={tempHumidity.temperature} 
-                    label="Temperature" 
-                    sensorType="tempHumidity"
-                    dataType="temperature"
-                    useAlertBasedRange={true}
-                    size={dialGaugeSize} 
-                    statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
-                    coldColor={themeColors.accentLight} 
-                    hotColor={themeColors.errorText} 
-                  />
-                )}
-                {tempHumidity && (
-                  <DialGauge 
-                    value={tempHumidity.humidity} 
-                    label="Humidity" 
-                    sensorType="tempHumidity"
-                    dataType="humidity"
-                    useAlertBasedRange={true}
-                    size={dialGaugeSize} 
-                    statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
-                    coldColor={themeColors.accent} 
-                    hotColor={themeColors.infoText} 
-                  />
-                )}
-              </ThemedView>
-              <ThemedView style={[styles.gaugesGrid, {marginTop: (tempHumidity && airQuality) ? Layout.spacing.md : 0}]}> {/* Use ThemedView */}
-                {airQuality && (
-                  <DialGauge 
-                    value={airQuality.pm25} 
-                    label="PM2.5" 
-                    sensorType="airQuality"
-                    dataType="pm25"
-                    useAlertBasedRange={true}
-                    size={dialGaugeSize} 
-                    statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
-                    coldColor={themeColors.successText} 
-                    hotColor={themeColors.warningText} 
-                  />
-                )}
-                {airQuality && (
-                  <DialGauge 
-                    value={airQuality.pm10} 
-                    label="PM10" 
-                    sensorType="airQuality"
-                    dataType="pm10"
-                    useAlertBasedRange={true}
-                    size={dialGaugeSize} 
-                    statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
-                    coldColor={themeColors.successText} 
-                    hotColor={themeColors.warningText} 
-                  />
-                )}
-              </ThemedView>
-              {(!tempHumidity && !airQuality && sensorData) && <ThemedText style={[styles.noDataTextSmall, {color: subtleTextColor}]}>No environmental data.</ThemedText>}
-            </Card>
-          )}
-
-          {thermalData && (
-            <Card>
-              <ThemedText style={[styles.subSectionTitle, { color: sectionTitleColor }]}>
-                {thermalData.name || "Thermal Scan"}
-              </ThemedText>
-              <HeatmapGrid data={thermalData.pixels} minTempThreshold={15} maxTempThreshold={45} />
-              <ThemedView style={styles.thermalStatsContainer}> {/* Use ThemedView */}
+            </View>
+            
+            <View style={styles.gaugesGrid}>
+              {tempHumidity && (
                 <DialGauge 
-                  value={thermalData.avgTemp} 
-                  label="Avg Temp" 
-                  sensorType="thermalImager"
-                  dataType="avgTemp"
-                  useAlertBasedRange={true}
-                  size={Math.min(dialGaugeSize, 100)} 
-                  statusColor={getStatusColorForDial('normal', currentTheme)} 
-                  coldColor={themeColors.accentLight} 
-                  hotColor={themeColors.errorText} 
-                />
-                <DialGauge 
-                  value={thermalData.maxTemp} 
-                  label="Max Temp" 
-                  sensorType="thermalImager"
-                  dataType="maxTemp"
-                  useAlertBasedRange={true}
-                  size={Math.min(dialGaugeSize, 100)} 
-                  statusColor={getStatusColorForDial('normal', currentTheme)} 
-                  coldColor={themeColors.accentLight} 
-                  hotColor={themeColors.errorText} 
-                />
-              </ThemedView>
-              <ThemedView style={styles.thermalTextStatsContainer}>
-                 <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Min: {thermalData.minTemp.toFixed(1)}°C</ThemedText>
-                 <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Avg: {thermalData.avgTemp.toFixed(1)}°C</ThemedText>
-                 <ThemedText style={[styles.thermalStatText, { color: textColor }]}>Max: {thermalData.maxTemp.toFixed(1)}°C</ThemedText>
-              </ThemedView>
-            </Card>
-          )}
-          {vibrationData && (
-            <Card>
-              <ThemedText style={[styles.subSectionTitle, { color: sectionTitleColor }]}>
-                Vibration Sensor
-              </ThemedText>
-              <ThemedView style={styles.vibrationContainer}>
-                <DialGauge 
-                  value={vibrationData.rmsAcceleration} 
-                  label="RMS Acceleration" 
-                  sensorType="vibration"
-                  dataType="rmsAcceleration"
+                  value={tempHumidity.temperature} 
+                  label="Temperature" 
+                  sensorType="tempHumidity"
+                  dataType="temperature"
                   useAlertBasedRange={true}
                   size={dialGaugeSize} 
-                  statusColor={getStatusColorForDial(vibrationData.status || 'normal', currentTheme)} 
-                  coldColor={themeColors.successText} 
+                  statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
+                  coldColor={themeColors.accentLight} 
                   hotColor={themeColors.errorText} 
                 />
-                <ThemedText style={[styles.vibrationLabel, { color: textColor }]}>
-                  {`${vibrationData.name || 'Vibration Sensor'} - ${vibrationData.status || 'Unknown'}`}
-                </ThemedText>
-              </ThemedView>
-            </Card>
-          )}
-        </ThemedView>
+              )}
+              {tempHumidity && (
+                <DialGauge 
+                  value={tempHumidity.humidity} 
+                  label="Humidity" 
+                  sensorType="tempHumidity"
+                  dataType="humidity"
+                  useAlertBasedRange={true}
+                  size={dialGaugeSize} 
+                  statusColor={getStatusColorForDial(tempHumidity.status, currentTheme)} 
+                  coldColor={themeColors.accent} 
+                  hotColor={themeColors.infoText} 
+                />
+              )}
+            </View>
+            
+            <View style={styles.gaugesGrid}>
+              {airQuality && (
+                <DialGauge 
+                  value={airQuality.pm25} 
+                  label="PM2.5" 
+                  sensorType="airQuality"
+                  dataType="pm25"
+                  useAlertBasedRange={true}
+                  size={dialGaugeSize} 
+                  statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
+                  coldColor={themeColors.successText} 
+                  hotColor={themeColors.warningText} 
+                />
+              )}
+              {airQuality && (
+                <DialGauge 
+                  value={airQuality.pm10} 
+                  label="PM10" 
+                  sensorType="airQuality"
+                  dataType="pm10"
+                  useAlertBasedRange={true}
+                  size={dialGaugeSize} 
+                  statusColor={getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme)} 
+                  coldColor={themeColors.successText} 
+                  hotColor={themeColors.warningText} 
+                />
+              )}
+            </View>
+          </Card>
+        )}
+
+        {/* Thermal Imaging */}
+        {thermalData && (
+          <Card style={styles.sensorCard}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="thermometer-outline" size={20} color={warningColor} />
+              <ThemedText style={[styles.cardTitle, { color: textColor }]}>
+                {thermalData.name || "Thermal Imaging"}
+              </ThemedText>
+            </View>
+            
+            <HeatmapGrid data={thermalData.pixels} minTempThreshold={15} maxTempThreshold={45} />
+            
+            <View style={[styles.thermalStats, { borderTopColor: cardBorderColor }]}>
+              <DialGauge 
+                value={thermalData.avgTemp} 
+                label="Avg Temp" 
+                sensorType="thermalImager"
+                dataType="avgTemp"
+                useAlertBasedRange={true}
+                size={Math.min(dialGaugeSize, 100)} 
+                statusColor={getStatusColorForDial('normal', currentTheme)} 
+                coldColor={themeColors.accentLight} 
+                hotColor={themeColors.errorText} 
+              />
+              <DialGauge 
+                value={thermalData.maxTemp} 
+                label="Max Temp" 
+                sensorType="thermalImager"
+                dataType="maxTemp"
+                useAlertBasedRange={true}
+                size={Math.min(dialGaugeSize, 100)} 
+                statusColor={getStatusColorForDial('normal', currentTheme)} 
+                coldColor={themeColors.accentLight} 
+                hotColor={themeColors.errorText} 
+              />
+            </View>
+            
+            <View style={styles.thermalTextStats}>
+              <ThemedText style={[styles.statText, { color: textColor }]}>
+                Min: {thermalData.minTemp.toFixed(1)}°C
+              </ThemedText>
+              <ThemedText style={[styles.statText, { color: textColor }]}>
+                Avg: {thermalData.avgTemp.toFixed(1)}°C
+              </ThemedText>
+              <ThemedText style={[styles.statText, { color: textColor }]}>
+                Max: {thermalData.maxTemp.toFixed(1)}°C
+              </ThemedText>
+            </View>
+          </Card>
+        )}
+
+        {/* Vibration Data */}
+        {vibrationData && (
+          <Card style={styles.sensorCard}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="pulse-outline" size={20} color={errorColor} />
+              <ThemedText style={[styles.cardTitle, { color: textColor }]}>
+                Vibration Sensor
+              </ThemedText>
+            </View>
+            
+            <View style={styles.vibrationContainer}>
+              <DialGauge 
+                value={vibrationData.rmsAcceleration} 
+                label="RMS Acceleration" 
+                sensorType="vibration"
+                dataType="rmsAcceleration"
+                useAlertBasedRange={true}
+                size={dialGaugeSize} 
+                statusColor={getStatusColorForDial(vibrationData.status || 'normal', currentTheme)} 
+                coldColor={themeColors.successText} 
+                hotColor={themeColors.errorText} 
+              />
+              <ThemedText style={[styles.vibrationStatus, { color: textColor }]}>
+                {`${vibrationData.name || 'Vibration Sensor'} - ${vibrationData.status || 'Unknown'}`}
+              </ThemedText>
+            </View>
+          </Card>
+        )}
+
+        {/* Bottom spacing */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollViewContainer: {
-    flex: 1,
-  },
-  scrollContentContainer: {
-    flexGrow: 1,
-    paddingBottom: Layout.spacing.xl,
-  },
   container: {
     flex: 1,
+  },
+  scrollContent: {
     padding: Layout.spacing.md,
-    backgroundColor: 'transparent', 
+    paddingBottom: Layout.spacing.xl,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Layout.spacing.lg,
-    backgroundColor: 'transparent',
+    padding: Layout.spacing.xl,
   },
-  detailsCard: {
+  
+  // Loading & Error States
+  loadingText: {
+    marginTop: Layout.spacing.md,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    textAlign: 'center',
+  },
+  errorTitle: {
+    marginTop: Layout.spacing.md,
+    fontSize: Layout.fontSize.xl,
+    fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
+  },
+  errorText: {
+    marginTop: Layout.spacing.sm,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
     marginBottom: Layout.spacing.lg,
-    padding: Layout.spacing.lg, 
+  },
+  
+  // Header Card
+  headerCard: {
+    marginBottom: Layout.spacing.lg,
+    padding: Layout.spacing.lg,
+  },
+  roomHeader: {
+    gap: Layout.spacing.md,
+  },
+  roomTitleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Layout.spacing.sm,
   },
   roomName: {
+    flex: 1,
     fontSize: Layout.fontSize.xxl,
     fontFamily: 'Montserrat-Bold',
-    marginBottom: Layout.spacing.md, 
-    textAlign: 'center',
+    marginRight: Layout.spacing.md,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs / 2,
+    borderRadius: Layout.borderRadius.sm,
+    backgroundColor: 'transparent',
+  },
+  statusText: {
+    fontSize: Layout.fontSize.xs,
+    fontFamily: 'Montserrat-Bold',
+    marginLeft: Layout.spacing.xs / 2,
+  },
+  roomMeta: {
+    gap: Layout.spacing.xs,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Layout.spacing.sm,
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
+    gap: Layout.spacing.xs,
   },
-  metaIcon: {
-    marginRight: Layout.spacing.sm,
-  },
-  locationText: {
+  metaText: {
     fontSize: Layout.fontSize.md,
     fontFamily: 'Montserrat-Medium',
   },
-  monitoredText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-  },
-  actionsContainer: {
+  
+  // Action Buttons
+  actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around', 
-    marginTop: Layout.spacing.lg,
-    gap: Layout.spacing.md, 
-    backgroundColor: 'transparent',
+    gap: Layout.spacing.sm,
+    marginTop: Layout.spacing.sm,
   },
-  customButton: { // New style for custom TouchableOpacity buttons
-    flex: 1,
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Layout.spacing.sm + 2, // Adjusted padding
+    paddingVertical: Layout.spacing.sm,
     paddingHorizontal: Layout.spacing.md,
     borderRadius: Layout.borderRadius.md,
-    minHeight: 44, // Ensure good tap target size
-  },
-  customButtonOutline: {
-    backgroundColor: 'transparent',
     borderWidth: 1,
+    flex: 1,
+    minHeight: 44,
   },
-  customButtonText: {
+  actionButtonText: {
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-SemiBold',
+    marginLeft: Layout.spacing.xs,
   },
-  customButtonIcon: {
+  
+  // Primary Button
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.lg,
+    borderRadius: Layout.borderRadius.md,
+    marginTop: Layout.spacing.lg,
+  },
+  primaryButtonText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-SemiBold',
+    marginLeft: Layout.spacing.xs,
+  },
+  buttonIcon: {
     marginRight: Layout.spacing.xs,
   },
-  sectionTitle: {
-    fontSize: Layout.fontSize.xl,
-    fontFamily: 'Montserrat-Bold', 
-    marginTop: Layout.spacing.lg,
+  
+  // Section Headers
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: Layout.spacing.md,
-    paddingBottom: Layout.spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth, 
+    gap: Layout.spacing.sm,
   },
-  subSectionTitle: {
+  sectionTitle: {
     fontSize: Layout.fontSize.lg,
-    fontFamily: 'Montserrat-SemiBold', 
+    fontFamily: 'Montserrat-Bold',
+  },
+  
+  // Cards
+  sensorCard: {
     marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.lg,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.md,
+    gap: Layout.spacing.sm,
+  },
+  cardTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  
+  // Empty States
+  emptyStateCard: {
+    alignItems: 'center',
+    padding: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+  },
+  emptyStateTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold',
+    marginTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.sm,
+  },
+  emptyStateText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'center',
   },
+  
+  loadingCard: {
+    alignItems: 'center',
+    padding: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+  },
+  
+  // Sensor Data
   gaugesGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'flex-start', 
+    alignItems: 'flex-start',
     flexWrap: 'wrap',
-    backgroundColor: 'transparent',
-    marginVertical: Layout.spacing.xs, 
+    marginBottom: Layout.spacing.md,
   },
-  thermalStatsContainer: {
+  
+  // Thermal Stats
+  thermalStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     marginTop: Layout.spacing.md,
     paddingTop: Layout.spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    backgroundColor: 'transparent',
+    // borderTopColor is now applied dynamically
   },
-  thermalTextStatsContainer: {
+  thermalTextStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: Layout.spacing.md,
     paddingTop: Layout.spacing.sm,
-    backgroundColor: 'transparent',
   },
-  thermalStatText: {
+  statText: {
     fontSize: Layout.fontSize.sm,
     fontFamily: 'Montserrat-Medium',
   },
+  
+  // Vibration
   vibrationContainer: {
     alignItems: 'center',
     paddingVertical: Layout.spacing.lg,
-    backgroundColor: 'transparent',
   },
-  vibrationLabel: {
+  vibrationStatus: {
     fontSize: Layout.fontSize.md,
     fontFamily: 'Montserrat-Medium',
+    marginTop: Layout.spacing.md,
     textAlign: 'center',
   },
-  noDataTextSmall: {
-    textAlign: 'center',
-    fontStyle: 'italic',
-    padding: Layout.spacing.md,
-    fontFamily: 'Montserrat-Regular',
+  
+  bottomSpacer: {
+    height: Layout.spacing.xl,
   },
 });

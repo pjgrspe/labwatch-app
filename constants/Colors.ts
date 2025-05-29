@@ -63,6 +63,7 @@ export const Colors = {
     
     // --- Input & Form Elements ---
     inputBackground: grayWhite,
+    mutedText: '#8e8e93',     // Added
     inputBorder: '#D1D5DB',
     inputFocusBorder: brandPurple,
     inputPlaceholder: grayLight,
