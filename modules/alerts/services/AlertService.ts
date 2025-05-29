@@ -29,7 +29,7 @@ import {
 export const ALERTS_COLLECTION = 'alerts';
 
 // --- Alert Thresholds and Definitions ---
-const ALERT_THRESHOLDS = {
+export const ALERT_THRESHOLDS = {
   TEMPERATURE_CRITICAL_HIGH: 35,
   TEMPERATURE_HIGH: 30,
   TEMPERATURE_CRITICAL_LOW: 5,
@@ -49,6 +49,92 @@ const ALERT_THRESHOLDS = {
   THERMAL_HIGH_MAX_PIXEL: 60,
   VIBRATION_CRITICAL: 5.0,
   VIBRATION_HIGH: 2.0,
+};
+
+export interface GaugeRange {
+  min: number;
+  max: number;
+  dangerLevel?: number;
+  unit: string;
+}
+
+export const getGaugeRangeForSensor = (
+  sensorType: string,
+  dataType?: 'temperature' | 'humidity' | 'pm25' | 'pm10' | 'avgTemp' | 'maxTemp' | 'rmsAcceleration'
+): GaugeRange => {
+  switch (sensorType) {
+    case 'tempHumidity':
+      if (dataType === 'temperature') {
+        return {
+          min: ALERT_THRESHOLDS.TEMPERATURE_CRITICAL_LOW - 5,
+          max: ALERT_THRESHOLDS.TEMPERATURE_CRITICAL_HIGH + 5,
+          dangerLevel: ALERT_THRESHOLDS.TEMPERATURE_HIGH,
+          unit: 'C'
+        };
+      } else if (dataType === 'humidity') {
+        return {
+          min: 0,
+          max: 100,
+          dangerLevel: ALERT_THRESHOLDS.HUMIDITY_HIGH,
+          unit: '%'
+        };
+      }
+      break;
+    
+    case 'airQuality':
+      if (dataType === 'pm25') {
+        return {
+          min: 0,
+          max: ALERT_THRESHOLDS.PM25_CRITICAL + 50,
+          dangerLevel: ALERT_THRESHOLDS.PM25_HIGH,
+          unit: 'µg/m³'
+        };
+      } else if (dataType === 'pm10') {
+        return {
+          min: 0,
+          max: ALERT_THRESHOLDS.PM10_CRITICAL + 100,
+          dangerLevel: ALERT_THRESHOLDS.PM10_HIGH,
+          unit: 'µg/m³'
+        };
+      }
+      break;
+    
+    case 'thermalImager':
+      if (dataType === 'avgTemp') {
+        return {
+          min: 0,
+          max: ALERT_THRESHOLDS.THERMAL_CRITICAL_AVG + 10,
+          dangerLevel: ALERT_THRESHOLDS.THERMAL_HIGH_AVG,
+          unit: 'C'
+        };
+      } else if (dataType === 'maxTemp') {
+        return {
+          min: 0,
+          max: ALERT_THRESHOLDS.THERMAL_CRITICAL_MAX_PIXEL + 10,
+          dangerLevel: ALERT_THRESHOLDS.THERMAL_HIGH_MAX_PIXEL,
+          unit: 'C'
+        };
+      }
+      break;
+    
+    case 'vibration':
+      if (dataType === 'rmsAcceleration') {
+        return {
+          min: 0,
+          max: ALERT_THRESHOLDS.VIBRATION_CRITICAL + 2,
+          dangerLevel: ALERT_THRESHOLDS.VIBRATION_HIGH,
+          unit: 'g'
+        };
+      }
+      break;
+  }
+  
+  // Default fallback
+  return {
+    min: 0,
+    max: 100,
+    unit: ''
+  };
 };
 
 const createAlertMessage = (

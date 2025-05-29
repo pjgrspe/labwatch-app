@@ -1,189 +1,454 @@
-// labwatch-app/components/ui/DialGauge.tsx
 import { Text as ThemedText } from '@/components/Themed';
-import Layout from '@/constants/Layout'; // Import Layout for font sizes
+import Layout from '@/constants/Layout';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { getGaugeRangeForSensor } from '@/modules/alerts/services/AlertService';
 import { interpolateColor, polarToCartesian } from '@/utils/dialGauge';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line } from 'react-native-svg';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 interface DialGaugeProps {
   value: number;
   label: string;
-  unit: string;
+  unit?: string;
   min?: number;
   max?: number;
-  coldColor?: string; // Will remain as passed
-  hotColor?: string;  // Will remain as passed
+  coldColor?: string;
+  hotColor?: string;
   dangerLevel?: number;
-  size?: number; // New prop for custom size
-  statusColor?: string; // To pass the status-based color from parent
+  size?: number;
+  statusColor?: string;
+  sensorType?: string;
+  dataType?: 'temperature' | 'humidity' | 'pm25' | 'pm10' | 'avgTemp' | 'maxTemp' | 'rmsAcceleration';
+  useAlertBasedRange?: boolean;
 }
 
 const DialGauge: React.FC<DialGaugeProps> = ({
   value,
   label,
   unit,
-  min = 0,
-  max = 100,
-  coldColor = '#3B82F6', // Default cold color
-  hotColor = '#EF4444',  // Default hot color
+  min,
+  max,
+  coldColor = '#06B6D4', // Modern cyan
+  hotColor = '#EF4444',
   dangerLevel,
-  size = 150, // Default size, can be overridden
-  statusColor, // Use this for the main value text color if provided
+  size = 150,
+  statusColor,
+  sensorType,
+  dataType,
+  useAlertBasedRange = false,
 }) => {
   const themeTextColor = useThemeColor({}, 'text');
-  const innerCircleFillColor = useThemeColor({}, 'cardBackground'); // Use cardBackground for inner part
-  const tickBackgroundColor = useThemeColor({}, 'borderColor');
-  const indicatorKnobColor = useThemeColor({}, 'tint'); // Use tint for the knob
-  const dangerMarkerColor = useThemeColor({}, 'warningText'); // Use warningText for danger marker
+  const innerCircleFillColor = useThemeColor({}, 'cardBackground');
+  const trackBackgroundColor = useThemeColor({}, 'borderColor');
+  const indicatorKnobColor = useThemeColor({}, 'tint');
+  const dangerMarkerColor = '#F59E0B'; // Amber warning color
+  const criticalColor = '#DC2626'; // Red critical color
+  const successColor = '#10B981'; // Green success color
 
-  // --- Gauge Configuration based on size ---
-  const center = size / 2;
-  const numTicks = 50; // Reduced for smaller sizes
-  const tickLength = size * 0.07; // Scaled
-  const tickWidth = size * 0.015; // Scaled
-  const radius = size / 2 - tickLength - (size * 0.05);
-  const radiusOuter = radius + tickLength / 2;
-  const radiusInner = radius - tickLength / 2;
-  const startAngle = 220;
-  const endAngle = 140;
-  const angleRange = (endAngle < startAngle)
-      ? (endAngle + 360 - startAngle)
-      : (endAngle - startAngle);
+  // Animation refs
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-  // --- Value Calculation ---
-  const clampedValue = Math.min(Math.max(value, min), max);
-  const percentage = (max - min) > 0 ? (clampedValue - min) / (max - min) : 0;
-  const valueAngle = startAngle + percentage * angleRange;
-
-  // --- Danger Level Calculation ---
-  const dangerPercentage = dangerLevel !== undefined && (max - min) > 0
-    ? (dangerLevel - min) / (max - min)
-    : -1;
-  const dangerAngle = startAngle + dangerPercentage * angleRange;
-
-  // --- Generate Ticks ---
-  const ticks = Array.from({ length: numTicks }).map((_, i) => {
-    const tickPercentage = i / (numTicks - 1);
-    const angle = startAngle + tickPercentage * angleRange;
-    const tickValue = min + tickPercentage * (max - min);
-
-    const start = polarToCartesian(center, center, radiusInner, angle);
-    const end = polarToCartesian(center, center, radiusOuter, angle);
-
-    let color = tickBackgroundColor;
-    if (tickValue <= clampedValue) {
-      // Use passed coldColor and hotColor for interpolation
-      color = interpolateColor(coldColor, hotColor, tickPercentage);
-    }
-
-    const isDangerTick = dangerLevel !== undefined &&
-        Math.abs(tickValue - dangerLevel) < ((max - min) / numTicks);
-
-    if (isDangerTick) {
-        color = dangerMarkerColor;
-    }
-    return { ...start, x2: end.x, y2: end.y, stroke: color };
-  });
-
-  const knobPos = polarToCartesian(center, center, radiusOuter, valueAngle);
-  const dangerPos = (dangerLevel !== undefined && dangerPercentage >= 0 && dangerPercentage <= 1)
-    ? polarToCartesian(center, center, radiusOuter + (size * 0.03), dangerAngle)
+  // Get alert-based range if enabled
+  const alertRange = useAlertBasedRange && sensorType && dataType 
+    ? getGaugeRangeForSensor(sensorType, dataType)
     : null;
 
+  const finalMin = alertRange?.min ?? min ?? 0;
+  const finalMax = alertRange?.max ?? max ?? 100;
+  const finalDangerLevel = alertRange?.dangerLevel ?? dangerLevel;
+  const finalUnit = alertRange?.unit ?? unit ?? '';
+
+  // Modern gauge configuration
+  const center = size / 2;
+  const strokeWidth = size * 0.08; // Slightly thinner for cleaner look
+  const radius = (size - strokeWidth) / 2 - size * 0.08;
+  
+  // Arc configuration (270 degrees)
+  const startAngle = 225; // Start from bottom-left
+  const totalAngle = 270;
+
+  // Value calculations
+  const clampedValue = Math.min(Math.max(value, finalMin), finalMax);
+  const percentage = (finalMax - finalMin) > 0 ? (clampedValue - finalMin) / (finalMax - finalMin) : 0;
+  
+  // Danger zone calculations
+  const dangerPercentage = finalDangerLevel !== undefined && (finalMax - finalMin) > 0
+    ? (finalDangerLevel - finalMin) / (finalMax - finalMin)
+    : -1;
+
+  // Determine status based on value
+  const getStatusInfo = () => {
+    if (finalDangerLevel !== undefined && clampedValue >= finalDangerLevel) {
+      const criticalThreshold = finalDangerLevel + (finalMax - finalDangerLevel) * 0.5;
+      if (clampedValue >= criticalThreshold) {
+        return { color: criticalColor, status: 'CRITICAL', pulse: true, icon: '⚠️' };
+      }
+      return { color: dangerMarkerColor, status: 'WARNING', pulse: false, icon: '⚡' };
+    }
+    return { 
+      color: statusColor || interpolateColor(coldColor, hotColor, percentage), 
+      status: 'NORMAL', 
+      pulse: false,
+      icon: '✓'
+    };
+  };
+
+  const statusInfo = getStatusInfo();
+
+  // Start pulse animation for critical alerts
+  useEffect(() => {
+    if (statusInfo.pulse) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [statusInfo.pulse, pulseAnim]);
+
+  // Scale animation on mount
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 50,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  // Create arc path
+  const createArcPath = (startAngle: number, endAngle: number, radius: number) => {
+    const start = polarToCartesian(center, center, radius, endAngle);
+    const end = polarToCartesian(center, center, radius, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+  };
+
+  // Background track
+  const trackPath = createArcPath(startAngle, startAngle + totalAngle, radius);
+  
+  // Progress arc
+  const progressAngle = totalAngle * percentage;
+  const progressPath = createArcPath(startAngle, startAngle + progressAngle, radius);
+
+  // Get the interpolated color based on current value percentage
+  const getProgressColor = () => {
+    if (statusInfo.status === 'CRITICAL') return criticalColor;
+    if (statusInfo.status === 'WARNING') return dangerMarkerColor;
+    
+    // Use interpolated color based on percentage for normal status
+    return interpolateColor(coldColor, hotColor, percentage);
+  };
+
+  const progressColor = getProgressColor();
+
+  // Danger zone arc (if applicable)
+  const dangerPath = dangerPercentage >= 0 && dangerPercentage <= 1 
+    ? createArcPath(startAngle + (totalAngle * dangerPercentage), startAngle + totalAngle, radius)
+    : null;
+
+  // Indicator position
+  const indicatorAngle = startAngle + (totalAngle * percentage);
+  const indicatorPos = polarToCartesian(center, center, radius, indicatorAngle);
+
   // Dynamic font sizes
-  const valueFontSize = size * 0.25;
-  const unitFontSize = size * 0.09;
-  const labelFontSize = size * 0.1;
-  const degreeSymbolSize = valueFontSize * 0.5;
+  const valueFontSize = size * 0.2;
+  const unitFontSize = size * 0.08;
+  const labelFontSize = size * 0.08;
+  const statusFontSize = size * 0.05;
+
+  const showDegreeSymbol = finalUnit === 'C' || finalUnit === '°C';
 
   return (
-    <View style={[styles.container, { width: size }]}>
-      <ThemedText style={[styles.label, { color: themeTextColor, fontSize: labelFontSize, marginBottom: size * 0.05 }]}>{label}</ThemedText>
-      <View style={[styles.gaugeContainer, { width: size, height: size }]}>
+    <Animated.View style={[
+      styles.container, 
+      { 
+        width: size + 30,
+        transform: [{ scale: scaleAnim }]
+      }
+    ]}>
+      {/* Label with status indicator */}
+      <View style={styles.labelContainer}>
+        <ThemedText style={[
+          styles.label, 
+          { 
+            color: themeTextColor, 
+            fontSize: labelFontSize,
+          }
+        ]}>
+          {label}
+        </ThemedText>
+        {statusInfo.status !== 'NORMAL' && (
+          <View style={[
+            styles.statusIcon,
+            { backgroundColor: statusInfo.color + '20' }
+          ]}>
+            <ThemedText style={[styles.statusEmoji, { fontSize: labelFontSize * 0.8 }]}>
+              {statusInfo.icon}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+      
+      <Animated.View style={[
+        styles.gaugeContainer, 
+        { 
+          width: size, 
+          height: size,
+          transform: statusInfo.pulse ? [{ scale: pulseAnim }] : undefined
+        }
+      ]}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <Defs>
+            {/* Remove the progress gradient and keep only danger gradient */}
+            <LinearGradient id={`dangerGradient-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={dangerMarkerColor} stopOpacity="0.9" />
+              <Stop offset="100%" stopColor={criticalColor} stopOpacity="1" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Outer ring for depth */}
           <Circle
             cx={center}
             cy={center}
-            r={radiusInner - (size*0.02)}
-            fill={innerCircleFillColor}
-          />
-          {ticks.map((tick, index) => (
-            <Line
-              key={index}
-              x1={tick.x}
-              y1={tick.y}
-              x2={tick.x2}
-              y2={tick.y2}
-              stroke={tick.stroke}
-              strokeWidth={tickWidth}
-              strokeLinecap="round"
-            />
-          ))}
-          {dangerPos && (
-             <Circle
-                cx={dangerPos.x}
-                cy={dangerPos.y}
-                r={size * 0.025}
-                fill={dangerMarkerColor}
-             />
-          )}
-          <Circle
-            cx={knobPos.x}
-            cy={knobPos.y}
-            r={size * 0.04}
-            fill={indicatorKnobColor}
-            stroke={useThemeColor({}, 'background')}
+            r={radius + strokeWidth / 2}
+            stroke={trackBackgroundColor}
             strokeWidth="2"
+            fill="none"
+            opacity={0.1}
           />
+
+          {/* Background track */}
+          <Path
+            d={trackPath}
+            stroke={trackBackgroundColor}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            opacity={0.2}
+          />
+
+          {/* Danger zone track */}
+          {dangerPath && (
+            <Path
+              d={dangerPath}
+              stroke={`url(#dangerGradient-${label})`}
+              strokeWidth={strokeWidth * 0.6}
+              fill="none"
+              strokeLinecap="round"
+              opacity={0.7}
+            />
+          )}
+
+          {/* Progress track - now uses interpolated color */}
+          <Path
+            d={progressPath}
+            stroke={progressColor}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            opacity={statusInfo.status !== 'NORMAL' ? 0.95 : 0.8}
+          />
+
+          {/* Center highlight circle */}
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius * 0.25}
+            fill={innerCircleFillColor}
+            stroke={statusInfo.color}
+            strokeWidth="2"
+            opacity={0.1}
+          />
+
+          {/* Value indicator dot */}
+          <Circle
+            cx={indicatorPos.x}
+            cy={indicatorPos.y}
+            r={size * 0.04}
+            fill={statusInfo.color}
+            stroke={innerCircleFillColor}
+            strokeWidth="3"
+          />
+
+          {/* Additional indicator ring for emphasis */}
+          {statusInfo.status !== 'NORMAL' && (
+            <Circle
+              cx={indicatorPos.x}
+              cy={indicatorPos.y}
+              r={size * 0.06}
+              fill="none"
+              stroke={statusInfo.color}
+              strokeWidth="2"
+              opacity={0.3}
+            />
+          )}
         </Svg>
-        <View style={styles.textContainer}>
-            <ThemedText style={[styles.valueText, { color: statusColor || themeTextColor, fontSize: valueFontSize, lineHeight: valueFontSize * 1.1 }]}>
-                {Math.round(value)}
-                <ThemedText style={[styles.degreeSymbol, { color: statusColor || themeTextColor, fontSize: degreeSymbolSize, bottom: valueFontSize * 0.1, left: valueFontSize * 0.05  }]}>°</ThemedText>
+
+        {/* Center content */}
+        <View style={styles.centerContent}>
+          <View style={styles.valueContainer}>
+            <ThemedText style={[
+              styles.valueText, 
+              { 
+                color: progressColor, // Use the same interpolated color for the text
+                fontSize: valueFontSize,
+                fontWeight: statusInfo.status !== 'NORMAL' ? '800' : '300'
+              }
+            ]}>
+              {Math.round(value)}
+              {showDegreeSymbol && (
+                <ThemedText style={[styles.degreeSymbol, { 
+                  color: progressColor, // Use the same interpolated color
+                  fontSize: valueFontSize * 0.4 
+                }]}>
+                  °
+                </ThemedText>
+              )}
             </ThemedText>
-            <ThemedText style={[styles.unitText, { color: themeTextColor, fontSize: unitFontSize,  marginTop: -size*0.02 }]}>
-                {unit}
-            </ThemedText>
+            
+            {finalUnit && (
+              <ThemedText style={[
+                styles.unitText, 
+                { 
+                  color: themeTextColor, 
+                  fontSize: unitFontSize,
+                  opacity: 0.7
+                }
+              ]}>
+                {finalUnit}
+              </ThemedText>
+            )}
+          </View>
         </View>
+      </Animated.View>
+
+      {/* Status badge */}
+      {statusInfo.status !== 'NORMAL' && (
+        <View style={[
+          styles.statusBadge, 
+          { 
+            backgroundColor: statusInfo.color + '15',
+            borderColor: statusInfo.color,
+          }
+        ]}>
+          <ThemedText style={[
+            styles.statusText, 
+            { 
+              color: statusInfo.color,
+              fontSize: statusFontSize,
+              fontWeight: '700'
+            }
+          ]}>
+            {statusInfo.status}
+          </ThemedText>
+        </View>
+      )}
+
+      {/* Range indicators */}
+      <View style={styles.rangeContainer}>
+        <ThemedText style={[styles.rangeText, { color: themeTextColor, opacity: 0.5 }]}>
+          {Math.round(finalMin)}
+        </ThemedText>
+        <ThemedText style={[styles.rangeText, { color: themeTextColor, opacity: 0.5 }]}>
+          {Math.round(finalMax)}
+        </ThemedText>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    padding: 5, // Reduced padding
-    marginVertical: 10,
+    paddingVertical: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.xs,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.xs,
+    gap: Layout.spacing.xs,
   },
   label: {
-    fontWeight: Layout.fontWeight.medium, // Use Layout constants
+    fontFamily: 'Montserrat-SemiBold',
     textTransform: 'uppercase',
-    letterSpacing: 0.5, // Reduced letter spacing
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  statusIcon: {
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  statusEmoji: {
+    textAlign: 'center',
   },
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  textContainer: {
+  centerContent: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  valueContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   valueText: {
-    fontWeight: Layout.fontWeight.light, // Use Layout constants
+    fontFamily: 'Montserrat-Light',
     position: 'relative',
+    textAlign: 'center',
   },
   degreeSymbol: {
-      fontWeight: Layout.fontWeight.light, // Use Layout constants
-      position: 'absolute',
-      // Positioning will be relative to the valueText size
+    fontFamily: 'Montserrat-Light',
+    position: 'absolute',
+    top: -8,
   },
   unitText: {
-    fontWeight: Layout.fontWeight.normal, // Use Layout constants
+    fontFamily: 'Montserrat-Medium',
+    textAlign: 'center',
+    marginTop: -5,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginTop: Layout.spacing.xs,
+  },
+  statusText: {
+    fontFamily: 'Montserrat-SemiBold',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  rangeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '85%',
+    marginTop: Layout.spacing.xs,
+  },
+  rangeText: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 9,
   },
 });
 

@@ -1,7 +1,7 @@
-// app/(tabs)/index.tsx
-import { Colors } from '@/constants/Colors'; //
-import Layout from '@/constants/Layout'; //
-import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor'; //
+// app/(tabs)/dashboard.tsx
+import { Colors } from '@/constants/Colors';
+import Layout from '@/constants/Layout';
+import { useCurrentTheme, useThemeColor } from '@/hooks/useThemeColor';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
@@ -14,7 +14,7 @@ import RecentAlertsSection from '@/modules/dashboard/components/RecentAlertsSect
 import RoomDetailCard from '@/modules/dashboard/components/RoomDetailCard';
 import { useDashboardData } from '@/modules/dashboard/hooks/useDashboardData';
 
-// Define DashboardSectionType and DashboardSection interface here or import from a types file
+// Define DashboardSectionType and DashboardSection interface
 type DashboardSectionType =
   | 'ROOM_DETAILS'
   | 'QUICK_ACTIONS_CAROUSEL'
@@ -26,7 +26,7 @@ interface DashboardSection {
   id: string;
   type: DashboardSectionType;
   data?: any;
-  height?: number; // For spacers
+  height?: number;
 }
 
 export default function DashboardScreen() {
@@ -63,7 +63,7 @@ export default function DashboardScreen() {
         hasAnyData: hasAnySensorDataForSelectedRoom,
       },
     },
-    { id: 'spacer-1', type: 'SPACER', height: Layout.spacing.xs },
+    { id: 'spacer-1', type: 'SPACER', height: Layout.spacing.lg },
     { id: 'quick-actions-carousel', type: 'QUICK_ACTIONS_CAROUSEL' },
     { id: 'spacer-2', type: 'SPACER', height: Layout.spacing.lg },
     {
@@ -71,7 +71,7 @@ export default function DashboardScreen() {
       type: 'RECENT_ALERTS_SECTION',
       data: {
         title: 'Recent Alerts',
-        alerts: recentAlerts.slice(0,3), // Use data from hook
+        alerts: recentAlerts.slice(0, 3),
         onPressViewAll: () => router.push('/(tabs)/alerts'),
       },
     },
@@ -80,8 +80,8 @@ export default function DashboardScreen() {
       id: 'other-rooms',
       type: 'OTHER_MONITORED_ROOMS_SECTION',
       data: {
-        title: 'Other Monitored Rooms',
-        roomsData: otherMonitoredRooms, // Use data from hook
+        title: 'Other Active Rooms',
+        roomsData: otherMonitoredRooms,
         onPressViewAll: () => router.push('/(tabs)/rooms'),
       },
     },
@@ -97,12 +97,23 @@ export default function DashboardScreen() {
       case 'ROOM_DETAILS':
         return <RoomDetailCard {...item.data} />;
       case 'QUICK_ACTIONS_CAROUSEL':
-        // Pass necessary props to QuickActionsCarousel if it's now a standalone section
-        return <QuickActionsCarousel />;
+        return (
+          <View style={styles.sectionWrapper}>
+            <QuickActionsCarousel />
+          </View>
+        );
       case 'RECENT_ALERTS_SECTION':
-        return <RecentAlertsSection {...item.data} />;
+        return (
+          <View style={styles.sectionWrapper}>
+            <RecentAlertsSection {...item.data} />
+          </View>
+        );
       case 'OTHER_MONITORED_ROOMS_SECTION':
-        return <OtherMonitoredRoomsSection {...item.data} />;
+        return (
+          <View style={styles.sectionWrapper}>
+            <OtherMonitoredRoomsSection {...item.data} />
+          </View>
+        );
       case 'SPACER':
         return <View style={{ height: item.height }} />;
       default:
@@ -111,7 +122,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: scrollViewBackgroundColor }}>
+    <View style={[styles.container, { backgroundColor: scrollViewBackgroundColor }]}>
       <FlatList
         data={dashboardSections}
         renderItem={renderDashboardSection}
@@ -132,8 +143,13 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  flatListContentContainer: { //
-    paddingTop: Layout.spacing.md,
+  container: {
+    flex: 1,
   },
-  // Other styles specific to this screen if any, or remove if all are component-specific
+  flatListContentContainer: {
+    paddingBottom: Layout.spacing.xl,
+  },
+  sectionWrapper: {
+    paddingHorizontal: Layout.spacing.md,
+  },
 });
