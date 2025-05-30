@@ -4,11 +4,10 @@ import { db } from '@/FirebaseConfig';
 import { AlertService } from '@/modules/alerts/services/AlertService';
 import { Room, RoomSensorData } from '@/types/rooms';
 import { AirQualityData, TempHumidityData, ThermalImagerData, VibrationData } from '@/types/sensor';
-// Import convertTimestamps from the new utility file
 import { convertTimestamps } from '@/utils/firebaseUtils';
 import {
   addDoc,
-  collection, deleteDoc, // ADDED: For permanent deletion
+  collection, deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -18,40 +17,42 @@ import {
   serverTimestamp,
   Unsubscribe,
   updateDoc,
-  where, // ADDED: For querying archived rooms
-  writeBatch
+  where
 } from 'firebase/firestore';
 
 export const ROOMS_COLLECTION = 'rooms';
 const SENSORS_SUBCOLLECTION = 'sensors';
 
-// Track last processed sensor data to detect actual changes
 const lastProcessedSensorData = new Map<string, any>();
 
 export const RoomService = {
-  addRoom: async (roomData: { name: string; location: string; isMonitored: boolean }): Promise<string> => {
+  addRoom: async (roomData: Partial<Omit<Room, 'id' | 'createdAt' | 'isArchived' | 'archivedAt'>>): Promise<string> => { // Modified to accept more fields
     try {
       const roomCollectionRef = collection(db, ROOMS_COLLECTION);
       const docRef = await addDoc(roomCollectionRef, {
-        ...roomData,
+        name: roomData.name || 'Unnamed Room',
+        location: roomData.location || 'No Location',
+        isMonitored: roomData.isMonitored !== undefined ? roomData.isMonitored : true,
+        esp32ModuleId: roomData.esp32ModuleId || null,
+        esp32ModuleName: roomData.esp32ModuleName || null,
         createdAt: serverTimestamp(),
-        isArchived: false, // Initialize as not archived
+        isArchived: false, 
       });
       console.log('Room added with ID:', docRef.id);
 
-      const defaultSensors = initializeDefaultSensorData(docRef.id, roomData.name);
-      const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, docRef.id, SENSORS_SUBCOLLECTION);
-
-      const batch = writeBatch(db);
-      Object.entries(defaultSensors).forEach(([sensorType, sensorDataEntry]) => {
-        const typedSensorDataEntry = sensorDataEntry as TempHumidityData | AirQualityData | ThermalImagerData | VibrationData | undefined;
-        if (typedSensorDataEntry && typedSensorDataEntry.id) {
-          const sensorDocRef = doc(sensorsCollectionRef, typedSensorDataEntry.id);
-          batch.set(sensorDocRef, { ...typedSensorDataEntry, type: sensorType, lastUpdate: serverTimestamp() });
-        }
-      });
-      await batch.commit();
-      console.log('Default sensor data initialized for room:', docRef.id);
+      // Default sensor initialization (if needed for your logic, otherwise can be removed if RTDB is sole source for ESP32s)
+      // const defaultSensors = initializeDefaultSensorData(docRef.id, roomData.name || 'Unnamed Room');
+      // const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, docRef.id, SENSORS_SUBCOLLECTION);
+      // const batch = writeBatch(db);
+      // Object.entries(defaultSensors).forEach(([sensorType, sensorDataEntry]) => {
+      //   const typedSensorDataEntry = sensorDataEntry as TempHumidityData | AirQualityData | ThermalImagerData | VibrationData | undefined;
+      //   if (typedSensorDataEntry && typedSensorDataEntry.id) {
+      //     const sensorDocRef = doc(sensorsCollectionRef, typedSensorDataEntry.id);
+      //     batch.set(sensorDocRef, { ...typedSensorDataEntry, type: sensorType, lastUpdate: serverTimestamp() });
+      //   }
+      // });
+      // await batch.commit();
+      // console.log('Default sensor data initialized for room:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error("Error adding room:", error);
@@ -59,17 +60,38 @@ export const RoomService = {
     }
   },
 
+  // --- START: New method to get all ESP32 Module IDs in use ---
+  getAllEsp32ModuleIdsInUse: async (): Promise<Set<string>> => {
+    const assignedIds = new Set<string>();
+    try {
+      const roomsCollectionRef = collection(db, ROOMS_COLLECTION);
+      // Fetch all rooms, regardless of archived status,
+      // as an ESP32 assigned to any existing room is considered "in use".
+      const querySnapshot = await getDocs(roomsCollectionRef);
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.esp32ModuleId && typeof data.esp32ModuleId === 'string' && data.esp32ModuleId.trim() !== '') {
+          assignedIds.add(data.esp32ModuleId);
+        }
+      });
+      return assignedIds;
+    } catch (error) {
+      console.error("Error fetching all assigned ESP32 module IDs:", error);
+      return assignedIds; // Return whatever was collected, or an empty set on error
+    }
+  },
+  // --- END: New method ---
+
   getRooms: async (): Promise<Room[]> => {
     try {
       const roomsCollectionRef = collection(db, ROOMS_COLLECTION);
-      // MODIFIED: Filter out archived rooms
       const q = query(roomsCollectionRef, where("isArchived", "==", false), orderBy("name", "asc"));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
         return convertTimestamps({
           id: doc.id,
-          name_or_id: data.name || doc.id,
+          name_or_id: data.name || doc.id, // Kept for compatibility if used elsewhere
           ...data
         }) as Room;
       });
@@ -98,7 +120,6 @@ export const RoomService = {
     }
   },
 
-
   getRoomById: async (roomId: string): Promise<Room | null> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -116,7 +137,15 @@ export const RoomService = {
   updateRoom: async (roomId: string, updatedData: Partial<Omit<Room, 'id' | 'createdAt'>>): Promise<void> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
-      await updateDoc(roomDocRef, updatedData);
+      // Ensure null values for esp32ModuleId/Name are handled correctly to unset them.
+      const dataToUpdate = { ...updatedData };
+      if (dataToUpdate.esp32ModuleId === null) {
+        dataToUpdate.esp32ModuleId = undefined; // Or use FieldValue.delete() if you want to remove the field
+      }
+       if (dataToUpdate.esp32ModuleName === null) {
+        dataToUpdate.esp32ModuleName = undefined; // Or use FieldValue.delete()
+      }
+      await updateDoc(roomDocRef, dataToUpdate);
       console.log('Room updated:', roomId);
     } catch (error) {
       console.error(`Error updating room ${roomId}:`, error);
@@ -124,18 +153,14 @@ export const RoomService = {
     }
   },
 
-  // SIMPLIFIED: Archive room with relaxed validation
   archiveRoom: async (roomId: string): Promise<void> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
-      
-      // Simple update - just set archive flags
       await updateDoc(roomDocRef, {
         isArchived: true,
-        archivedAt: new Date(),
+        archivedAt: serverTimestamp(), // Use serverTimestamp for consistency
         isMonitored: false,
       });
-      
       console.log('Room archived:', roomId);
     } catch (error: any) {
       console.error(`Error archiving room ${roomId}:`, error);
@@ -143,17 +168,14 @@ export const RoomService = {
     }
   },
 
-  // SIMPLIFIED: Restore room
   restoreRoom: async (roomId: string): Promise<void> => {
     try {
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
-      
-      // Simple update - remove archive flags
       await updateDoc(roomDocRef, {
         isArchived: false,
-        archivedAt: null, // Clear the archived timestamp
+        archivedAt: null, 
+        // Optionally, decide if isMonitored should be reset to true or kept as is
       });
-      
       console.log('Room restored:', roomId);
     } catch (error: any) {
       console.error(`Error restoring room ${roomId}:`, error);
@@ -161,15 +183,11 @@ export const RoomService = {
     }
   },
 
-  // SIMPLIFIED: Delete room with better error handling
   deleteRoom: async (roomId: string): Promise<void> => {
     try {
       console.log(`Attempting to delete room: ${roomId}`);
-      
-      // Delete the room document
       const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
       await deleteDoc(roomDocRef);
-      
       console.log(`Room ${roomId} deleted successfully`);
     } catch (error: any) {
       console.error(`Error deleting room ${roomId}:`, error);
@@ -182,8 +200,8 @@ export const RoomService = {
     try {
       const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, roomId, SENSORS_SUBCOLLECTION);
       const querySnapshot = await getDocs(sensorsCollectionRef);
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
+      querySnapshot.forEach(docSnapshot => { // Changed from forEach to docSnapshot
+        const data = docSnapshot.data();
         const sensorType = data.type as keyof RoomSensorData;
         if (sensorType) {
           sensors[sensorType] = convertTimestamps(data) as any;
@@ -216,15 +234,14 @@ export const RoomService = {
     onError?: (error: Error) => void
   ): Unsubscribe => {
     const roomsCollectionRef = collection(db, ROOMS_COLLECTION);
-    // MODIFIED: Filter out archived rooms
     const q = query(roomsCollectionRef, where("isArchived", "==", false), orderBy("name", "asc"));
     return onSnapshot(q,
         (querySnapshot) => {
-            const rooms = querySnapshot.docs.map(doc => {
-                const data = doc.data();
+            const rooms = querySnapshot.docs.map(docSnapshot => { // Changed from doc to docSnapshot
+                const data = docSnapshot.data();
                 return convertTimestamps({
-                    id: doc.id,
-                    name_or_id: data.name || doc.id,
+                    id: docSnapshot.id,
+                    name_or_id: data.name || docSnapshot.id,
                     ...data
                 }) as Room;
             });
@@ -239,7 +256,7 @@ export const RoomService = {
     );
   },
 
-  onArchivedRoomsUpdate: ( // New listener for archived rooms
+  onArchivedRoomsUpdate: ( 
     onNext: (rooms: Room[]) => void,
     onError?: (error: Error) => void
   ): Unsubscribe => {
@@ -247,11 +264,11 @@ export const RoomService = {
     const q = query(roomsCollectionRef, where("isArchived", "==", true), orderBy("archivedAt", "desc"));
     return onSnapshot(q,
         (querySnapshot) => {
-            const rooms = querySnapshot.docs.map(doc => {
-                const data = doc.data();
+            const rooms = querySnapshot.docs.map(docSnapshot => { // Changed from doc to docSnapshot
+                const data = docSnapshot.data();
                 return convertTimestamps({
-                    id: doc.id,
-                    name_or_id: data.name || doc.id,
+                    id: docSnapshot.id,
+                    name_or_id: data.name || docSnapshot.id,
                     ...data
                 }) as Room;
             });
@@ -267,23 +284,25 @@ export const RoomService = {
   },
 
   onRoomSensorsUpdate: (
-    roomId: string, callback: (sensors: RoomSensorData) => void, p0?: (error: any) => void  ): Unsubscribe => {
+    roomId: string, callback: (sensors: RoomSensorData) => void, onErrorCallback?: (error: any) => void  ): Unsubscribe => { // Added onErrorCallback
     const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, roomId, SENSORS_SUBCOLLECTION);
 
-    let roomName = `Room ${roomId}`;
-    getDoc(doc(db, ROOMS_COLLECTION, roomId)).then(roomDocSnap => {
+    let roomName = `Room ${roomId}`; // Initialize with a fallback
+    
+    // Fetch room name once for alert messages
+    const roomDocRef = doc(db, ROOMS_COLLECTION, roomId);
+    getDoc(roomDocRef).then(roomDocSnap => {
         if(roomDocSnap.exists()) {
-            roomName = roomDocSnap.data().name || roomName;
+            roomName = roomDocSnap.data()?.name || roomName;
         }
-    }).catch(e => console.error(`Failed to fetch room name for ${roomId}: `, e));
+    }).catch(e => console.error(`Failed to fetch room name for ${roomId} during sensor update setup: `, e));
 
     return onSnapshot(sensorsCollectionRef,
       (querySnapshot) => {
         const sensors: Partial<RoomSensorData> = {};
-
         querySnapshot.forEach(docSnapshot => {
           const data = docSnapshot.data();
-          const sensorType = data.type as keyof RoomSensorData;
+          const sensorType = data.type as keyof RoomSensorData; // Assume 'type' field exists in sensor doc
           const sensorId = docSnapshot.id;
           const sensorKey = `${roomId}-${sensorId}`;
 
@@ -295,21 +314,13 @@ export const RoomService = {
             const hasDataChanged = !lastData || hasSignificantChange(lastData, liveData, sensorType);
 
             if (hasDataChanged) {
-              console.log(`Detected data change for ${sensorType} in room ${roomId}, checking for alerts`);
+              console.log(`Detected data change for ${sensorType} in room ${roomId} (Name: ${roomName}), checking for alerts`);
               lastProcessedSensorData.set(sensorKey, { ...liveData });
 
-              if (roomName) {
-                AlertService.checkForAlerts(roomId, roomName, sensorId, sensorType, liveData)
-                  .then(() => {})
-                  .catch(e => console.error(`Error during AlertService.checkForAlerts for ${sensorType} in ${roomName} (Sensor ID: ${sensorId}):`, e));
-              } else {
-                console.warn(`roomName not yet resolved for roomId ${roomId} when processing sensor ${sensorId}. Alert message might use fallback name.`);
-                AlertService.checkForAlerts(roomId, `Room ${roomId}`, sensorId, sensorType, liveData)
-                  .then(() => {})
-                  .catch(e => console.error(`Error during AlertService.checkForAlerts (fallback roomName) for ${sensorType} in ${roomId}:`, e));
-              }
-            } else {
-              // console.log(`No significant change detected for ${sensorType} in room ${roomId}, skipping alert check`);
+              // Ensure roomName is resolved or fallback is used
+              const currentRoomName = roomName || `Room ${roomId}`;
+              AlertService.checkForAlerts(roomId, currentRoomName, sensorId, sensorType, liveData)
+                .catch(e => console.error(`Error during AlertService.checkForAlerts for ${sensorType} in ${currentRoomName} (Sensor ID: ${sensorId}):`, e));
             }
           }
         });
@@ -317,6 +328,9 @@ export const RoomService = {
       },
       (error) => {
         console.error(`Firebase onSnapshot error for sensors in room ${roomId}:`, error);
+        if (onErrorCallback) { // Use the provided error callback
+            onErrorCallback(error);
+        }
       }
     );
   },
@@ -362,26 +376,25 @@ export const RoomService = {
 
 const hasSignificantChange = (oldData: any, newData: any, sensorType: keyof RoomSensorData): boolean => {
   if (!oldData || !newData) return true;
-  const oldTimestamp = oldData.lastUpdate?.getTime?.() || oldData.timestamp?.getTime?.() || 0;
-  const newTimestamp = newData.lastUpdate?.getTime?.() || newData.timestamp?.getTime?.() || 0;
+  const oldTimestamp = oldData.lastUpdate?.toDate?.().getTime() || oldData.timestamp?.toDate?.() || 0; // Use toDate()
+  const newTimestamp = newData.lastUpdate?.toDate?.().getTime() || newData.timestamp?.toDate?.() || 0; // Use toDate()
 
-  if (Math.abs(newTimestamp - oldTimestamp) < 1000) {
-    return false;
+
+  if (Math.abs(newTimestamp - oldTimestamp) < 1000) { // Only compare if timestamps are different by at least 1s
+    // If timestamps are very close, check values to see if they actually changed
+     switch (sensorType) {
+        case 'tempHumidity': return oldData.temperature !== newData.temperature || oldData.humidity !== newData.humidity;
+        case 'airQuality': return oldData.pm25 !== newData.pm25 || oldData.pm10 !== newData.pm10;
+        case 'thermalImager': return oldData.maxTemp !== newData.maxTemp || oldData.avgTemp !== newData.avgTemp || oldData.minTemp !== newData.minTemp;
+        case 'vibration': return oldData.rmsAcceleration !== newData.rmsAcceleration;
+        default: return JSON.stringify(oldData) !== JSON.stringify(newData); // Fallback for other types if any
+    }
   }
-  switch (sensorType) {
-    case 'tempHumidity':
-      return oldData.temperature !== newData.temperature || oldData.humidity !== newData.humidity;
-    case 'airQuality':
-      return oldData.pm25 !== newData.pm25 || oldData.pm10 !== newData.pm10;
-    case 'thermalImager':
-      return oldData.maxTemp !== newData.maxTemp || oldData.avgTemp !== newData.avgTemp || oldData.minTemp !== newData.minTemp;
-    case 'vibration':
-      return oldData.rmsAcceleration !== newData.rmsAcceleration;
-    default:
-      return true;
-  }
+  // If timestamps are significantly different, assume data has changed or is new
+  return true; 
 };
 
+// Default sensor data initialization - can be removed if not used
 const initializeDefaultSensorData = (roomId: string, roomName: string): RoomSensorData => {
   const now = new Date();
   const createDefaultPixelMap = (): Record<string, number[]> => {
@@ -396,16 +409,16 @@ const initializeDefaultSensorData = (roomId: string, roomName: string): RoomSens
     tempHumidity: {
       id: `${roomId}-th-01`,
       name: `${roomName} Environment`,
-      temperature: 50,
-      humidity: 45,
+      temperature: 0, // Default values
+      humidity: 0,
       status: 'normal',
       timestamp: now,
     } as TempHumidityData,
     airQuality: {
       id: `${roomId}-aq-01`,
       name: `${roomName} Air Quality`,
-      pm25: 10,
-      pm10: 15,
+      pm25: 0,
+      pm10: 0,
       status: 'normal',
       timestamp: now,
     } as AirQualityData,
@@ -414,20 +427,17 @@ const initializeDefaultSensorData = (roomId: string, roomName: string): RoomSens
         name: `${roomName} Thermal Scan`,
         pixels: createDefaultPixelMap(),
         temperatures: createDefaultPixelMap(),
-        minTemp: 20,
-        maxTemp: 20,
-        avgTemp: 20,
+        minTemp: 0,
+        maxTemp: 0,
+        avgTemp: 0,
         timestamp: now,
     } as ThermalImagerData,
     vibration: {
       id: `${roomId}-vib-01`,
       name: `${roomName} Vibration`,
-      rmsAcceleration: 0.1,
+      rmsAcceleration: 0,
       status: 'normal',
       timestamp: now,
     } as VibrationData,
   };
 };
-
-export { convertTimestamps };
-

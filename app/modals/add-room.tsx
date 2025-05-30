@@ -2,7 +2,7 @@
 import { ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
-import { Rooms } from '@/modules';
+import { RoomService } from '@/modules/rooms/services/RoomService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -20,7 +20,7 @@ import {
   TouchableOpacity
 } from 'react-native';
 
-// Import the new utility function and type
+import { Room } from '@/types/rooms'; // <<< ADDED THIS IMPORT
 import { Esp32Device, getAvailableEsp32DeviceIds } from '@/utils/firebaseUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,15 +31,13 @@ export default function AddRoomModal() {
   const [location, setLocation] = useState('');
   const [isMonitored, setIsMonitored] = useState(true);
   
-  // State for ESP32 devices
   const [selectedModule, setSelectedModule] = useState<Esp32Device | null>(null);
   const [esp32DevicesList, setEsp32DevicesList] = useState<Esp32Device[]>([]);
   const [isLoadingEsp32List, setIsLoadingEsp32List] = useState(true);
 
-  const [isLoading, setIsLoading] = useState(false); // For the main add room action
+  const [isSaving, setIsSaving] = useState(false); 
   const [showModuleDropdown, setShowModuleDropdown] = useState(false);
 
-  // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const surfaceColor = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'cardBackground'); 
   const inputBackgroundColor = useThemeColor({ light: '#F2F2F7', dark: '#2C2C2E' }, 'inputBackground');
@@ -58,11 +56,20 @@ export default function AddRoomModal() {
     const fetchDeviceIds = async () => {
       setIsLoadingEsp32List(true);
       try {
-        const devices = await getAvailableEsp32DeviceIds();
-        setEsp32DevicesList(devices);
+        const [allPossibleRTDBEsp32s, assignedFirestoreEsp32IdsSet] = await Promise.all([
+          getAvailableEsp32DeviceIds(), 
+          RoomService.getAllEsp32ModuleIdsInUse() 
+        ]);
+
+        const availableForSelection = allPossibleRTDBEsp32s.filter(
+          device => !assignedFirestoreEsp32IdsSet.has(device.id)
+        );
+        
+        setEsp32DevicesList(availableForSelection);
       } catch (error) {
-        console.error("Failed to fetch ESP32 device IDs:", error);
-        Alert.alert("Error", "Could not load available ESP32 modules. Please ensure your Firebase Realtime Database is configured and accessible.");
+        console.error("Failed to fetch and filter ESP32 device IDs for AddRoomModal:", error);
+        Alert.alert("Error", "Could not load available ESP32 modules.");
+        setEsp32DevicesList([]); 
       } finally {
         setIsLoadingEsp32List(false);
       }
@@ -75,19 +82,20 @@ export default function AddRoomModal() {
       Alert.alert("Missing Information", "Please fill out both room name and location.");
       return;
     }
-    setIsLoading(true);
+    setIsSaving(true);
     try {
-      const roomData: any = { // Use 'any' or a more specific type if needed for RoomService
+      // Line 87 where 'Room' type is used
+      const roomData: Partial<Room> = { 
         name: roomName,
         location,
         isMonitored,
       };
       if (selectedModule) {
         roomData.esp32ModuleId = selectedModule.id;
-        roomData.esp32ModuleName = selectedModule.name; // Name is the ID itself
+        roomData.esp32ModuleName = selectedModule.name; 
       }
       
-      await Rooms.RoomService.addRoom(roomData);
+      await RoomService.addRoom(roomData); 
       Alert.alert(
         "Room Added",
         `Room "${roomName}" has been successfully added.`,
@@ -95,12 +103,11 @@ export default function AddRoomModal() {
           {
             text: "OK",
             onPress: () => {
-              setIsLoading(false);
-              global.requestAnimationFrame(() => { // Ensure router action happens after state update
+              setIsSaving(false);
+              global.requestAnimationFrame(() => { 
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  // Fallback if canGoBack is false (e.g., deep link)
                   router.replace('/(tabs)/rooms'); 
                 }
               });
@@ -111,7 +118,7 @@ export default function AddRoomModal() {
     } catch (error) {
       console.error("Error adding room:", error);
       Alert.alert("Error", "Failed to add room. Please try again.");
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -123,14 +130,11 @@ export default function AddRoomModal() {
         setShowModuleDropdown(false);
       }}
     >
-      {/* Displaying the ID as the primary identifier */}
       <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
-      {/* You can add a subtext if there's more info, e.g., "ESP32 Device" */}
-      {/* <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>ESP32 Device</ThemedText> */}
     </TouchableOpacity>
   );
   
-  if (isLoadingEsp32List) {
+  if (isLoadingEsp32List) { 
     return (
       <SafeAreaView style={[styles.container, { backgroundColor }]}>
         <ThemedView style={[styles.loadingView]}>
@@ -207,7 +211,6 @@ export default function AddRoomModal() {
                 <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
                   {selectedModule.name} 
                 </ThemedText>
-                {/* Optionally add a subtext if needed, e.g., "Registered ESP32" */}
               </ThemedView>
             ) : (
               <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
@@ -245,7 +248,7 @@ export default function AddRoomModal() {
 
       {/* Bottom Action */}
       <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-        {isLoading ? (
+        {isSaving ? (
           <ThemedView style={styles.loadingButton}>
             <ActivityIndicator size="small" color={tintColor} />
             <ThemedText style={[styles.loadingButtonText, { color: textSecondaryColor }]}>
@@ -256,6 +259,7 @@ export default function AddRoomModal() {
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: tintColor }]}
             onPress={handleAddRoom}
+            disabled={isLoadingEsp32List} 
           >
             <ThemedText style={styles.primaryButtonText}>Add Room</ThemedText>
           </TouchableOpacity>
@@ -291,10 +295,10 @@ export default function AddRoomModal() {
                 <ThemedView style={styles.emptyListContainer}>
                     <Ionicons name="hardware-chip-outline" size={40} color={textSecondaryColor}/>
                     <ThemedText style={[styles.emptyListText, {color: textColor}]}>
-                        No registered ESP32 devices found in Realtime Database.
+                        No available ESP32 devices found.
                     </ThemedText>
                     <ThemedText style={[styles.emptyListSubText, {color: textSecondaryColor}]}>
-                        Ensure devices are sending data to '/esp32_devices_data/'.
+                        Ensure new ESP32s are registered in RTDB and not already assigned to a room.
                     </ThemedText>
                 </ThemedView>
             ) : (
@@ -313,207 +317,41 @@ export default function AddRoomModal() {
   );
 }
 
-// Styles adapted from edit-room.tsx and refined
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  loadingText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Regular',
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: Layout.spacing.lg,
-    gap: Layout.spacing.xl, 
-  },
-  section: {
-    backgroundColor: 'transparent', 
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Layout.spacing.md,
-    gap: Layout.spacing.sm,
-    backgroundColor: 'transparent',
-  },
-  sectionTitle: {
-    fontSize: Layout.fontSize.lg,
-    fontFamily: 'Montserrat-SemiBold', 
-    fontWeight: Layout.fontWeight.semibold,
-  },
-  inputGroup: {
-    marginBottom: Layout.spacing.lg,
-    backgroundColor: 'transparent',
-  },
-  inputLabel: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium', 
-    fontWeight: Layout.fontWeight.medium,
-    marginBottom: Layout.spacing.sm,
-  },
-  input: {
-    height: 52, 
-    borderWidth: 1,
-    borderRadius: Layout.borderRadius.lg, 
-    paddingHorizontal: Layout.spacing.lg,
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Regular', 
-  },
-  dropdown: {
-    minHeight: 52, 
-    borderWidth: 1,
-    borderRadius: Layout.borderRadius.lg, 
-    paddingHorizontal: Layout.spacing.lg,
-    paddingVertical: Layout.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectedModuleContent: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  selectedModuleText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    fontWeight: Layout.fontWeight.medium,
-  },
-  selectedModuleType: { // Kept for potential future use, though not used for simple ID list
-    fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Regular',
-    marginTop: 2,
-  },
-  dropdownPlaceholder: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Regular',
-    flex: 1,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'transparent',
-    paddingVertical: Layout.spacing.sm, 
-  },
-  switchContent: {
-    flex: 1,
-    marginRight: Layout.spacing.lg,
-    backgroundColor: 'transparent',
-  },
-  switchLabel: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    fontWeight: Layout.fontWeight.medium,
-  },
-  switchDescription: {
-    fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Regular',
-    marginTop: 4,
-    lineHeight: Layout.fontSize.sm * 1.4,
-  },
-  bottomAction: {
-    padding: Layout.spacing.lg,
-    paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), 
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  loadingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    backgroundColor: 'transparent',
-    gap: Layout.spacing.sm,
-  },
-  loadingButtonText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: Layout.borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF', 
-    fontSize: Layout.fontSize.md, 
-    fontFamily: 'Montserrat-SemiBold',
-    fontWeight: Layout.fontWeight.semibold,
-  },
-  modalOverlay: { 
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-    justifyContent: 'flex-end', 
-  },
-  dropdownModal: { 
-    maxHeight: SCREEN_WIDTH, 
-    borderTopLeftRadius: Layout.borderRadius.lg, 
-    borderTopRightRadius: Layout.borderRadius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  dropdownHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Layout.spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    backgroundColor: 'transparent',
-  },
-  dropdownTitle: {
-    fontSize: Layout.fontSize.lg,
-    fontFamily: 'Montserrat-SemiBold',
-    fontWeight: Layout.fontWeight.semibold,
-  },
-  clearButton: {
-    paddingHorizontal: Layout.spacing.md,
-    paddingVertical: Layout.spacing.sm,
-  },
-  clearButtonText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    fontWeight: Layout.fontWeight.medium,
-  },
-  dropdownList: {
-    maxHeight: 300, 
-  },
-  dropdownItem: {
-    padding: Layout.spacing.lg,
-  },
-  dropdownItemText: {
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    fontWeight: Layout.fontWeight.medium,
-  },
-  dropdownItemSubtext: { // Kept for potential future use
-    fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Regular',
-    marginTop: 2,
-  },
-  emptyListContainer: {
-    padding: Layout.spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 150, // Ensure it's not too small
-  },
-  emptyListText: {
-    marginTop: Layout.spacing.md,
-    fontSize: Layout.fontSize.md,
-    fontFamily: 'Montserrat-Medium',
-    textAlign: 'center',
-  },
-  emptyListSubText: {
-    marginTop: Layout.spacing.xs,
-    fontSize: Layout.fontSize.sm,
-    fontFamily: 'Montserrat-Regular',
-    textAlign: 'center',
-  }
+  container: { flex: 1 },
+  loadingView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
+  loadingText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular' },
+  content: { flex: 1 },
+  contentContainer: { padding: Layout.spacing.lg, gap: Layout.spacing.xl },
+  section: { backgroundColor: 'transparent' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Layout.spacing.md, gap: Layout.spacing.sm, backgroundColor: 'transparent' },
+  sectionTitle: { fontSize: Layout.fontSize.lg, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
+  inputGroup: { marginBottom: Layout.spacing.lg, backgroundColor: 'transparent' },
+  inputLabel: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium, marginBottom: Layout.spacing.sm },
+  input: { height: 52, borderWidth: 1, borderRadius: Layout.borderRadius.lg, paddingHorizontal: Layout.spacing.lg, fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular' },
+  dropdown: { minHeight: 52, borderWidth: 1, borderRadius: Layout.borderRadius.lg, paddingHorizontal: Layout.spacing.lg, paddingVertical: Layout.spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  selectedModuleContent: { flex: 1, backgroundColor: 'transparent' },
+  selectedModuleText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
+  dropdownPlaceholder: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular', flex: 1 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent', paddingVertical: Layout.spacing.sm },
+  switchContent: { flex: 1, marginRight: Layout.spacing.lg, backgroundColor: 'transparent' },
+  switchLabel: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
+  switchDescription: { fontSize: Layout.fontSize.sm, fontFamily: 'Montserrat-Regular', marginTop: 4, lineHeight: Layout.fontSize.sm * 1.4 },
+  bottomAction: { padding: Layout.spacing.lg, paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), borderTopWidth: StyleSheet.hairlineWidth },
+  loadingButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, backgroundColor: 'transparent', gap: Layout.spacing.sm },
+  loadingButtonText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium' },
+  primaryButton: { height: 52, borderRadius: Layout.borderRadius.lg, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  dropdownModal: { maxHeight: SCREEN_WIDTH, borderTopLeftRadius: Layout.borderRadius.lg, borderTopRightRadius: Layout.borderRadius.lg, borderWidth: StyleSheet.hairlineWidth },
+  dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Layout.spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, backgroundColor: 'transparent' },
+  dropdownTitle: { fontSize: Layout.fontSize.lg, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
+  clearButton: { paddingHorizontal: Layout.spacing.md, paddingVertical: Layout.spacing.sm },
+  clearButtonText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
+  dropdownList: { maxHeight: 300 },
+  dropdownItem: { padding: Layout.spacing.lg },
+  dropdownItemText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
+  emptyListContainer: { padding: Layout.spacing.xl, alignItems: 'center', justifyContent: 'center', minHeight: 150 },
+  emptyListText: { marginTop: Layout.spacing.md, fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', textAlign: 'center' },
+  emptyListSubText: { marginTop: Layout.spacing.xs, fontSize: Layout.fontSize.sm, fontFamily: 'Montserrat-Regular', textAlign: 'center' },
 });
