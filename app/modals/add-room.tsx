@@ -2,10 +2,10 @@
 import { ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
-import { Rooms } from '@/modules';
-import { Ionicons } from '@expo/vector-icons'; // Added for header icon
+import { RoomService } from '@/modules/rooms/services/RoomService';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,14 +22,8 @@ import {
   TouchableOpacity
 } from 'react-native';
 
-// Mock ESP32 modules - replace with actual data source
-const ESP32_MODULES = [
-  { id: 'esp32_001', name: 'ESP32-001 (Lab Station A)', type: 'Multi-sensor' },
-  { id: 'esp32_002', name: 'ESP32-002 (Lab Station B)', type: 'Temperature/Humidity' },
-  { id: 'esp32_003', name: 'ESP32-003 (Air Quality Monitor)', type: 'Air Quality' },
-  { id: 'esp32_004', name: 'ESP32-004 (Thermal Imaging)', type: 'Thermal Camera' },
-  { id: 'esp32_005', name: 'ESP32-005 (Vibration Sensor)', type: 'Vibration' },
-];
+import { Room } from '@/types/rooms'; // <<< ADDED THIS IMPORT
+import { Esp32Device, getAvailableEsp32DeviceIds } from '@/utils/firebaseUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -38,11 +32,14 @@ export default function AddRoomModal() {
   const [roomName, setRoomName] = useState('');
   const [location, setLocation] = useState('');
   const [isMonitored, setIsMonitored] = useState(true);
-  const [selectedModule, setSelectedModule] = useState<typeof ESP32_MODULES[0] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [selectedModule, setSelectedModule] = useState<Esp32Device | null>(null);
+  const [esp32DevicesList, setEsp32DevicesList] = useState<Esp32Device[]>([]);
+  const [isLoadingEsp32List, setIsLoadingEsp32List] = useState(true);
+
+  const [isSaving, setIsSaving] = useState(false); 
   const [showModuleDropdown, setShowModuleDropdown] = useState(false);
 
-  // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const surfaceColor = useThemeColor({ light: '#FFFFFF', dark: '#1C1C1E' }, 'cardBackground'); 
   const inputBackgroundColor = useThemeColor({ light: '#F2F2F7', dark: '#2C2C2E' }, 'inputBackground');
@@ -57,21 +54,50 @@ export default function AddRoomModal() {
   const switchTrackColorFalse = borderColor;     
   const dropdownModalBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'cardBackground');
 
+  useEffect(() => {
+    const fetchDeviceIds = async () => {
+      setIsLoadingEsp32List(true);
+      try {
+        const [allPossibleRTDBEsp32s, assignedFirestoreEsp32IdsSet] = await Promise.all([
+          getAvailableEsp32DeviceIds(), 
+          RoomService.getAllEsp32ModuleIdsInUse() 
+        ]);
+
+        const availableForSelection = allPossibleRTDBEsp32s.filter(
+          device => !assignedFirestoreEsp32IdsSet.has(device.id)
+        );
+        
+        setEsp32DevicesList(availableForSelection);
+      } catch (error) {
+        console.error("Failed to fetch and filter ESP32 device IDs for AddRoomModal:", error);
+        Alert.alert("Error", "Could not load available ESP32 modules.");
+        setEsp32DevicesList([]); 
+      } finally {
+        setIsLoadingEsp32List(false);
+      }
+    };
+    fetchDeviceIds();
+  }, []);
+
   const handleAddRoom = async () => {
     if (!roomName.trim() || !location.trim()) {
       Alert.alert("Missing Information", "Please fill out both room name and location.");
       return;
     }
-    setIsLoading(true);
+    setIsSaving(true);
     try {
-      const roomData = {
+      // Line 87 where 'Room' type is used
+      const roomData: Partial<Room> = { 
         name: roomName,
         location,
         isMonitored,
-        ...(selectedModule && { esp32ModuleId: selectedModule.id, esp32ModuleName: selectedModule.name })
       };
+      if (selectedModule) {
+        roomData.esp32ModuleId = selectedModule.id;
+        roomData.esp32ModuleName = selectedModule.name; 
+      }
       
-      await Rooms.RoomService.addRoom(roomData);
+      await RoomService.addRoom(roomData); 
       Alert.alert(
         "Room Added",
         `Room "${roomName}" has been successfully added.`,
@@ -79,12 +105,12 @@ export default function AddRoomModal() {
           {
             text: "OK",
             onPress: () => {
-              setIsLoading(false);
-              global.requestAnimationFrame(() => {
+              setIsSaving(false);
+              global.requestAnimationFrame(() => { 
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(tabs)/rooms');
+                  router.replace('/(tabs)/rooms'); 
                 }
               });
             }
@@ -94,11 +120,11 @@ export default function AddRoomModal() {
     } catch (error) {
       console.error("Error adding room:", error);
       Alert.alert("Error", "Failed to add room. Please try again.");
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const renderModuleItem = ({ item }: { item: typeof ESP32_MODULES[0] }) => (
+  const renderModuleItem = ({ item }: { item: Esp32Device }) => (
     <TouchableOpacity
       style={[styles.dropdownItem, { backgroundColor: dropdownModalBackgroundColor, borderBottomColor: borderColor, borderBottomWidth: StyleSheet.hairlineWidth }]}
       onPress={() => {
@@ -107,9 +133,22 @@ export default function AddRoomModal() {
       }}
     >
       <ThemedText style={[styles.dropdownItemText, { color: textColor }]}>{item.name}</ThemedText>
-      <ThemedText style={[styles.dropdownItemSubtext, { color: textSecondaryColor }]}>{item.type}</ThemedText>
     </TouchableOpacity>
   );
+  
+  if (isLoadingEsp32List) { 
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <ThemedView style={[styles.loadingView]}>
+          <ActivityIndicator size="large" color={tintColor} />
+          <ThemedText style={[styles.loadingText, { color: textColor, marginTop: Layout.spacing.md }]}>
+            Loading ESP32 Modules...
+          </ThemedText>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <KeyboardAvoidingView 
@@ -179,15 +218,12 @@ export default function AddRoomModal() {
             {selectedModule ? (
               <ThemedView style={styles.selectedModuleContent}>
                 <ThemedText style={[styles.selectedModuleText, { color: textColor }]}>
-                  {selectedModule.name}
-                </ThemedText>
-                <ThemedText style={[styles.selectedModuleType, { color: textSecondaryColor }]}>
-                  {selectedModule.type}
+                  {selectedModule.name} 
                 </ThemedText>
               </ThemedView>
             ) : (
               <ThemedText style={[styles.dropdownPlaceholder, { color: placeholderTextColor }]}>
-                Select ESP32 Module (Optional)
+                Select ESP32 Device ID (Optional)
               </ThemedText>
             )}
             <Ionicons name="chevron-down" size={20} color={textSecondaryColor} />
@@ -220,7 +256,7 @@ export default function AddRoomModal() {
 
       {/* Bottom Action */}
       <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-        {isLoading ? (
+        {isSaving ? (
           <ThemedView style={styles.loadingButton}>
             <ActivityIndicator size="small" color={tintColor} />
             <ThemedText style={[styles.loadingButtonText, { color: textSecondaryColor }]}>
@@ -231,6 +267,7 @@ export default function AddRoomModal() {
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: tintColor }]}
             onPress={handleAddRoom}
+            disabled={isLoadingEsp32List} 
           >
             <ThemedText style={styles.primaryButtonText}>Add Room</ThemedText>
           </TouchableOpacity>
@@ -246,13 +283,13 @@ export default function AddRoomModal() {
         onRequestClose={() => setShowModuleDropdown(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setShowModuleDropdown(false)} 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setShowModuleDropdown(false)} 
         >
           <ThemedView style={[styles.dropdownModal, { backgroundColor: dropdownModalBackgroundColor, borderColor: borderColor }]}>
             <ThemedView style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
-              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select ESP32 Module</ThemedText>
+              <ThemedText style={[styles.dropdownTitle, { color: textColor }]}>Select ESP32 Device ID</ThemedText>
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => {
@@ -263,13 +300,25 @@ export default function AddRoomModal() {
                 <ThemedText style={[styles.clearButtonText, { color: tintColor }]}>Clear</ThemedText>
               </TouchableOpacity>
             </ThemedView>
-            <FlatList
-              data={ESP32_MODULES}
-              renderItem={renderModuleItem}
-              keyExtractor={(item) => item.id}
-              style={styles.dropdownList}
-              showsVerticalScrollIndicator={false}
-            />
+            {esp32DevicesList.length === 0 ? (
+                <ThemedView style={styles.emptyListContainer}>
+                    <Ionicons name="hardware-chip-outline" size={40} color={textSecondaryColor}/>
+                    <ThemedText style={[styles.emptyListText, {color: textColor}]}>
+                        No available ESP32 devices found.
+                    </ThemedText>
+                    <ThemedText style={[styles.emptyListSubText, {color: textSecondaryColor}]}>
+                        Ensure new ESP32s are registered in RTDB and not already assigned to a room.
+                    </ThemedText>
+                </ThemedView>
+            ) : (
+              <FlatList
+                data={esp32DevicesList}
+                renderItem={renderModuleItem}
+                keyExtractor={(item) => item.id}
+                style={styles.dropdownList}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </ThemedView>
         </TouchableOpacity>
       </Modal>
