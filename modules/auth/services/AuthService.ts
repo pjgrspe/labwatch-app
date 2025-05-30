@@ -25,8 +25,18 @@ export const AuthService = {
   onAuthStateChanged: (callback: (user: FirebaseUser | null, userProfile: UserProfile | null) => void) => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userProfile = await AuthService.getUserProfile(firebaseUser.uid);
-        callback(firebaseUser, userProfile);
+        // FIXED: Add proper error handling and delay to prevent permission issues
+        try {
+          // Add a small delay to ensure auth state is fully propagated
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const userProfile = await AuthService.getUserProfile(firebaseUser.uid);
+          callback(firebaseUser, userProfile);
+        } catch (error) {
+          console.warn('Error fetching user profile in auth state change:', error);
+          // Still call the callback with user but no profile to prevent blocking the auth flow
+          callback(firebaseUser, null);
+        }
       } else {
         callback(null, null);
       }
@@ -65,6 +75,7 @@ export const AuthService = {
   // SIMPLIFIED: Get user profile with better error handling
   getUserProfile: async (uid: string): Promise<UserProfile | null> => {
     try {
+      console.log(`Fetching user profile for UID: ${uid}`);
       const userDoc = await getDoc(doc(db, 'users', uid));
       
       if (!userDoc.exists()) {
@@ -73,6 +84,7 @@ export const AuthService = {
       }
       
       const userData = userDoc.data();
+      console.log(`User profile found for UID: ${uid}, status: ${userData.status}`);
       return {
         uid: userDoc.id,
         email: userData.email || '',
@@ -83,8 +95,13 @@ export const AuthService = {
         approvedAt: userData.approvedAt,
         deniedAt: userData.deniedAt,
       };
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+    } catch (error: any) {
+      // FIXED: Better error handling to prevent spam
+      if (error.code === 'permission-denied') {
+        console.warn(`Permission denied accessing user profile for UID: ${uid}. This might be expected during auth transitions.`);
+      } else {
+        console.error('Error fetching user profile:', error);
+      }
       return null; // Return null instead of throwing
     }
   },

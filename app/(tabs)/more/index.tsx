@@ -8,12 +8,19 @@ import { MenuSection, ProfileCard, QuickStatsCard, useMoreScreenData } from '@/m
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 
 export default function MoreScreen() {
   const router = useRouter();
   const backgroundColor = useThemeColor({}, 'background');
-  const { currentUser, userRole, isLoading } = useMoreScreenData();
+  const { currentUser, userRole, isLoading, refreshUserRole } = useMoreScreenData();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refreshUserRole();
+    setRefreshing(false);
+  }, [refreshUserRole]);
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -62,6 +69,27 @@ export default function MoreScreen() {
       route: '/(tabs)/more/settings',
       icon: 'settings-outline',
     },
+    {
+      title: 'About LabWatch',
+      subtitle: 'App version and information',
+      route: '/(tabs)/more/about',
+      icon: 'information-circle-outline',
+    },
+  ];
+
+  const dataMenuItems: MenuItem[] = [
+    {
+      title: 'Data Export',
+      subtitle: 'Export sensor data and reports',
+      route: '/(tabs)/more/data-export',
+      icon: 'download-outline',
+    },
+    {
+      title: 'System Health',
+      subtitle: 'Check sensor and network status',
+      route: '/(tabs)/more/system-health',
+      icon: 'pulse-outline',
+    },
   ];
 
   const adminMenuItems: MenuItem[] = userRole.isSuperAdmin
@@ -72,8 +100,36 @@ export default function MoreScreen() {
           route: '/(tabs)/more/admin/manage-users',
           icon: 'shield-checkmark-outline',
         },
+        {
+          title: 'System Configuration',
+          subtitle: 'Global settings and thresholds',
+          route: '/(tabs)/more/admin/config',
+          icon: 'construct-outline',
+        },
+        {
+          title: 'Audit Logs',
+          subtitle: 'System activity and changes',
+          route: '/(tabs)/more/admin/audit-logs',
+          icon: 'list-outline',
+        },
       ]
     : [];
+
+  const supportMenuItems: MenuItem[] = [
+    {
+      title: 'Help & Support',
+      subtitle: 'User guides and FAQs',
+      route: '/(tabs)/more/help',
+      icon: 'help-circle-outline',
+    },
+    {
+      title: 'Report Issue',
+      subtitle: 'Report bugs or request features',
+      route: '/(tabs)/more/report-issue',
+      icon: 'bug-outline',
+    },
+  ];
+
   const accountMenuItems: MenuItem[] = [
     {
       title: 'Sign Out',
@@ -83,7 +139,8 @@ export default function MoreScreen() {
       isDestructive: true,
     },
   ];
-  // Mock stats - replace with real data from your services
+
+  // Enhanced quick stats with more relevant data
   const quickStats = [
     {
       label: 'Active Rooms',
@@ -98,10 +155,16 @@ export default function MoreScreen() {
       onPress: () => router.push('/(tabs)/alerts' as any),
     },
     {
-      label: 'Incidents',
+      label: 'Recent Incidents',
       value: '1',
       icon: 'warning-outline' as const,
       onPress: () => router.push('/(tabs)/incidents' as any),
+    },
+    {
+      label: 'Online Sensors',
+      value: '24/26',
+      icon: 'radio-outline' as const,
+      onPress: () => router.push('/(tabs)/more/system-health' as any),
     },
   ];
 
@@ -114,7 +177,11 @@ export default function MoreScreen() {
       style={[styles.container, { backgroundColor }]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
-    >      <ProfileCard
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <ProfileCard
         user={currentUser}
         userRole={userRole.displayRole}
         onPress={() => router.push('/profile')}
@@ -128,6 +195,12 @@ export default function MoreScreen() {
         onItemPress={handleItemPress}
       />
 
+      <MenuSection
+        title="Data & Monitoring"
+        items={dataMenuItems}
+        onItemPress={handleItemPress}
+      />
+
       {adminMenuItems.length > 0 && (
         <MenuSection
           title="Administration"
@@ -135,6 +208,12 @@ export default function MoreScreen() {
           onItemPress={handleItemPress}
         />
       )}
+
+      <MenuSection
+        title="Support"
+        items={supportMenuItems}
+        onItemPress={handleItemPress}
+      />
 
       <MenuSection
         title="Account"

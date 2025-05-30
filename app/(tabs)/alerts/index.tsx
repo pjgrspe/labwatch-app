@@ -794,8 +794,8 @@ const styles = StyleSheet.create({
     paddingTop: Layout.spacing.sm,
     paddingHorizontal: Layout.spacing.md,
     paddingBottom: Layout.spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.borderColor, // Consider theming this
+    // borderBottomWidth: StyleSheet.hairlineWidth,
+    // borderBottomColor: Colors.light.borderColor,
     elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -915,9 +915,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Layout.spacing.md,
-    paddingHorizontal: Layout.spacing.md, // Match list item horizontal margin
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    // borderBottomColor is themed
+    paddingHorizontal: Layout.spacing.md,
   },
   sectionHeader: {
     fontSize: Layout.fontSize.lg,

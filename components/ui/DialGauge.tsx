@@ -1,4 +1,4 @@
-import { ThemedText } from '@/components';
+import { Text as ThemedText } from '../Themed';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { getGaugeRangeForSensor } from '@/modules/alerts/services/AlertService';
