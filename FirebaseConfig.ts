@@ -1,17 +1,28 @@
-// Import the functions you need from the SDKs you need
+// labwatch-app/FirebaseConfig.ts
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from "firebase/app";
-import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
-import { firebaseConfig } from "./APIKeys";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-
+import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth'; // Updated auth imports
+import { getFirestore } from 'firebase/firestore'; // Add this import
+import { firebaseConfig } from "./APIkeys";
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+export const app = initializeApp(firebaseConfig);
+
+// Initialize Auth
+// Use getAuth() for modular SDK if you are not using initializeAuth for specific persistence
+// For most cases, initializeAuth is preferred for custom persistence.
+let authInstance;
+try {
+  authInstance = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  });
+} catch (error) {
+  console.warn("Failed to initialize Auth with persistence, falling back to default. Error:", error);
+  // Fallback if initializeAuth with persistence fails (e.g., in a non-RN environment or error)
+  // This typically shouldn't happen in a React Native app if AsyncStorage is set up.
+  authInstance = getAuth(app);
+}
+export const auth = authInstance;
+
+// Initialize Firestore and export it as db
+export const db = getFirestore(app);

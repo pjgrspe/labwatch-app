@@ -1,29 +1,100 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+// labwatch-app/app/_layout.tsx
+import { FloatingAssistantButton } from '@/components';
+import { getCommonHeaderOptions } from '@/constants';
+import { useColorScheme } from '@/hooks';
+import {
+  Montserrat_400Regular,
+  Montserrat_500Medium,
+  Montserrat_600SemiBold,
+  Montserrat_700Bold,
+} from '@expo-google-fonts/montserrat';
+import { Ionicons } from '@expo/vector-icons'; // Ensure this import is correct
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useEffect } from 'react';
+import { View } from 'react-native';
+import 'react-native-get-random-values'; // For uuid
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  console.log("Value of Ionicons.font:", Ionicons.font); // <-- DEBUG LINE
+
+  const [loaded, error] = useFonts({
+    'Montserrat-Regular': Montserrat_400Regular,
+    'Montserrat-Medium': Montserrat_500Medium,
+    'Montserrat-SemiBold': Montserrat_600SemiBold,
+    'Montserrat-Bold': Montserrat_700Bold,
+    ...(Ionicons.font || {}), // <-- Safeguard: spread an empty object if Ionicons.font is undefined
   });
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
+  const colorScheme = useColorScheme() ?? 'light'; //
+  const commonOptions = getCommonHeaderOptions(colorScheme); //
+
+  useEffect(() => {
+    if (loaded || error) {
+      SplashScreen.hideAsync();
+    }
+    if (error) {
+      console.error("Font loading error:", error); // <-- Log font errors
+    }
+  }, [loaded, error]);
+
+  if (!loaded && !error) {
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={commonOptions}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="assistant"
+          options={{
+            title: 'AI Assistant',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            title: 'User Profile',
+          }}
+        />
+        <Stack.Screen
+          name="modals/add-room"
+          options={{
+            title: 'Add New Room',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="modals/edit-room"
+          options={{
+            title: 'Edit Room',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="modals/add-incident"
+          options={{
+            title: 'Add New Incident',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="modals/edit-incident"
+          options={{
+            title: 'Edit Incident',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen name="+not-found" options={{ title: 'Oops!'}} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <FloatingAssistantButton />
+    </View>
   );
 }

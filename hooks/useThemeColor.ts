@@ -1,16 +1,12 @@
-/**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
- */
-
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+// labwatch-app/hooks/useThemeColor.ts
+import { ColorName, Colors, ColorScheme } from '@/constants';
+import { useColorScheme as useNativeColorScheme } from 'react-native'; // Renamed to avoid conflict
 
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
-) {
-  const theme = useColorScheme() ?? 'light';
+  colorName: ColorName
+): string {
+  const theme: ColorScheme = useNativeColorScheme() ?? 'light';
   const colorFromProps = props[theme];
 
   if (colorFromProps) {
@@ -18,4 +14,9 @@ export function useThemeColor(
   } else {
     return Colors[theme][colorName];
   }
+}
+
+// It's also useful to have a hook that just returns the current theme string
+export function useCurrentTheme(): ColorScheme {
+  return useNativeColorScheme() ?? 'light';
 }
