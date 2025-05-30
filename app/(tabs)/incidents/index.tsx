@@ -1,6 +1,6 @@
 import { Card, ThemedText, ThemedView } from '@/components';
 import { Colors, Layout } from '@/constants';
-import { useThemeColor } from '@/hooks';
+import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { Incident } from '@/types/incidents';
 import { getIncidents } from '@/utils/firebaseUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,9 @@ export default function IncidentsListScreen() {
   const searchIconInputColor = useThemeColor({}, 'icon');
   const placeholderTextColor = useThemeColor({}, 'icon');
   const headerBackgroundColor = useThemeColor({}, 'cardBackground');
+  const currentTheme = useCurrentTheme();
+  const fabBackgroundColor = useThemeColor({}, 'tint');
+  const fabIconColor = useThemeColor({ light: '#FFFFFF', dark: '#FFFFFF' }, 'text');
   
   // Helper function to determine severity color (NOT a hook)
   const getSeverityColor = (severity: string) => {
@@ -62,6 +65,10 @@ export default function IncidentsListScreen() {
       case 'closed': return incidentInfoColor;
       default: return incidentInfoColor;
     }
+  };
+
+  const handleAddIncident = () => {
+    router.push('/modals/add-incident');
   };
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -200,7 +207,7 @@ export default function IncidentsListScreen() {
           title: 'Incident History',
           // headerRight: () => (
           //   <Link href="/modals/add-incident" asChild>
-          //     <TouchableOpacity style={{ marginRight: Layout.spacing.md }}>
+          //     <TouchableOpacity style={styles.headerButton}>
           //       <Ionicons name="add-circle-outline" size={28} color={tintColor} />
           //     </TouchableOpacity>
           //   </Link>
@@ -276,6 +283,18 @@ export default function IncidentsListScreen() {
             windowSize={10}
           />
         )}
+
+        {/* Floating Action Button */}
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            { backgroundColor: fabBackgroundColor, shadowColor: Colors[currentTheme].shadowColor }
+          ]}
+          onPress={handleAddIncident}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={30} color={fabIconColor} />
+        </TouchableOpacity>
       </ThemedView>
     </>
   );
@@ -429,5 +448,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     marginLeft: Layout.spacing.xs,
     flex: 1,
+  },
+  headerButton: {
+    marginRight: Layout.spacing.md,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: Layout.spacing.xl,
+    right: Layout.spacing.xl,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 999,
   },
 });

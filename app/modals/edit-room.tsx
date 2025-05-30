@@ -14,7 +14,9 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -168,14 +170,21 @@ export default function EditRoomModal() {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+        >
+        {/* Room Information Section */}
         <ThemedView style={[styles.section]}>
           <ThemedView style={styles.sectionHeader}>
             <Ionicons name="information-circle-outline" size={20} color={tintColor} />
@@ -250,8 +259,7 @@ export default function EditRoomModal() {
               onValueChange={setIsMonitored}
               value={isMonitored}
             />
-          </ThemedView>
-        </ThemedView>
+          </ThemedView>        </ThemedView>
       </ScrollView>
 
       <ThemedView style={[styles.bottomAction, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
@@ -272,6 +280,7 @@ export default function EditRoomModal() {
           </TouchableOpacity>
         )}
       </ThemedView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={showModuleDropdown}
@@ -325,41 +334,228 @@ export default function EditRoomModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  loadingView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
-  loadingText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular' },
-  content: { flex: 1 },
-  contentContainer: { padding: Layout.spacing.lg, gap: Layout.spacing.xl },
-  section: { backgroundColor: 'transparent' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Layout.spacing.md, gap: Layout.spacing.sm, backgroundColor: 'transparent' },
-  sectionTitle: { fontSize: Layout.fontSize.lg, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
-  inputGroup: { marginBottom: Layout.spacing.lg, backgroundColor: 'transparent' },
-  inputLabel: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium, marginBottom: Layout.spacing.sm },
-  input: { height: 52, borderWidth: 1, borderRadius: Layout.borderRadius.lg, paddingHorizontal: Layout.spacing.lg, fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular' },
-  dropdown: { minHeight: 52, borderWidth: 1, borderRadius: Layout.borderRadius.lg, paddingHorizontal: Layout.spacing.lg, paddingVertical: Layout.spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  selectedModuleContent: { flex: 1, backgroundColor: 'transparent' },
-  selectedModuleText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
-  selectedModuleType: { fontSize: Layout.fontSize.sm, fontFamily: 'Montserrat-Regular', marginTop: 2 },
-  dropdownPlaceholder: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Regular', flex: 1 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent', paddingVertical: Layout.spacing.sm },
-  switchContent: { flex: 1, marginRight: Layout.spacing.lg, backgroundColor: 'transparent' },
-  switchLabel: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
-  switchDescription: { fontSize: Layout.fontSize.sm, fontFamily: 'Montserrat-Regular', marginTop: 4, lineHeight: Layout.fontSize.sm * 1.4 },
-  bottomAction: { padding: Layout.spacing.lg, paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), borderTopWidth: StyleSheet.hairlineWidth },
-  loadingButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, backgroundColor: 'transparent', gap: Layout.spacing.sm },
-  loadingButtonText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium' },
-  primaryButton: { height: 52, borderRadius: Layout.borderRadius.lg, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { color: '#FFFFFF', fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
-  dropdownModal: { maxHeight: SCREEN_WIDTH, borderTopLeftRadius: Layout.borderRadius.lg, borderTopRightRadius: Layout.borderRadius.lg, borderWidth: StyleSheet.hairlineWidth },
-  dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Layout.spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth, backgroundColor: 'transparent' },
-  dropdownTitle: { fontSize: Layout.fontSize.lg, fontFamily: 'Montserrat-SemiBold', fontWeight: Layout.fontWeight.semibold },
-  clearButton: { paddingHorizontal: Layout.spacing.md, paddingVertical: Layout.spacing.sm },
-  clearButtonText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
-  dropdownList: { maxHeight: 300 },
-  dropdownItem: { padding: Layout.spacing.lg },
-  dropdownItemText: { fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', fontWeight: Layout.fontWeight.medium },
-  emptyListContainer: { padding: Layout.spacing.xl, alignItems: 'center', justifyContent: 'center', minHeight: 150 },
-  emptyListText: { marginTop: Layout.spacing.md, fontSize: Layout.fontSize.md, fontFamily: 'Montserrat-Medium', textAlign: 'center' },
-  emptyListSubText: { marginTop: Layout.spacing.xs, fontSize: Layout.fontSize.sm, fontFamily: 'Montserrat-Regular', textAlign: 'center' },
+  container: {
+    flex: 1,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  loadingView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  loadingText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular', // Ensure this font is available
+  },
+  
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: Layout.fontSize.xl,
+    fontFamily: 'Montserrat-Bold', // Ensure this font is available
+    fontWeight: Layout.fontWeight.bold,
+  },
+  
+  // Content
+  content: {
+    flex: 1,
+  },  contentContainer: {
+    padding: Layout.spacing.lg,
+    gap: Layout.spacing.xl, // Space between sections
+    paddingBottom: Layout.spacing.lg + 30, // Extra padding for keyboard
+  },
+  
+  // Sections
+  section: {
+    backgroundColor: 'transparent', // Key change: No card-like background
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.md,
+    gap: Layout.spacing.sm,
+    backgroundColor: 'transparent',
+  },
+  sectionTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold', // Ensure this font is available
+    fontWeight: Layout.fontWeight.semibold,
+  },
+  
+  // Input Groups
+  inputGroup: {
+    marginBottom: Layout.spacing.lg,
+    backgroundColor: 'transparent',
+  },
+  inputLabel: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium', // Ensure this font is available
+    fontWeight: Layout.fontWeight.medium,
+    marginBottom: Layout.spacing.sm,
+  },
+  input: {
+    height: 52,
+    borderWidth: 1,
+    borderRadius: Layout.borderRadius.lg,
+    paddingHorizontal: Layout.spacing.lg,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular', // Ensure this font is available
+  },
+  
+  // Dropdown (for selecting ESP32 module in the form)
+  dropdown: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: Layout.borderRadius.lg,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedModuleContent: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  selectedModuleText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  selectedModuleType: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 2,
+  },
+  dropdownPlaceholder: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+    flex: 1,
+  },
+  
+  // Switch
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    paddingVertical: Layout.spacing.sm,
+  },
+  switchContent: {
+    flex: 1,
+    marginRight: Layout.spacing.lg,
+    backgroundColor: 'transparent',
+  },
+  switchLabel: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  switchDescription: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 4,
+    lineHeight: Layout.fontSize.sm * 1.4,
+  },
+  
+  // Bottom Action
+  bottomAction: {
+    padding: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.lg + (Layout.isSmallDevice ? 0 : 10), // Adjust for home bar if needed
+    borderTopWidth: StyleSheet.hairlineWidth,
+     // surfaceColor for the bar itself
+  },
+  loadingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    backgroundColor: 'transparent',
+    gap: Layout.spacing.sm,
+  },
+  loadingButtonText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+  },
+  primaryButton: {
+    height: 52,
+    borderRadius: Layout.borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: Layout.fontWeight.semibold,
+  },
+  
+  // Modal for ESP32 selection
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  dropdownModal: {
+    maxHeight: SCREEN_WIDTH, // Or a fixed value like 400
+    borderTopLeftRadius: Layout.borderRadius.lg, // More pronounced rounding for slide-up modal
+    borderTopRightRadius: Layout.borderRadius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Layout.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
+  },
+  dropdownTitle: {
+    fontSize: Layout.fontSize.lg,
+    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: Layout.fontWeight.semibold,
+  },
+  clearButton: {
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+  },
+  clearButtonText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  dropdownList: {
+    maxHeight: 300, // Adjust as needed
+  },
+  dropdownItem: {
+    padding: Layout.spacing.lg,
+    // borderBottomWidth will be applied inline
+  },
+  dropdownItemText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: Layout.fontWeight.medium,
+  },
+  dropdownItemSubtext: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 2,
+  },
 });

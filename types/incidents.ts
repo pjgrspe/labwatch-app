@@ -15,6 +15,7 @@ export interface Incident {
   severity: AlertSeverity; // Re-use AlertSeverity or define a specific IncidentSeverity
   actionsTaken?: string[];
   resolutionDetails?: string;
+  aiSuggestion?: string; // AI-generated suggestion for handling the incident
   // Add any other fields relevant to your lab monitoring system
   // e.g., equipmentInvolved, substancesInvolved, followUpRequired, etc.
 }
