@@ -2,7 +2,8 @@
 import { Card, ThemedText, ThemedView } from '@/components';
 import { Colors, Layout } from '@/constants';
 import { useCurrentTheme, useThemeColor } from '@/hooks';
-import { useChat } from '@/modules/assistant/hooks/useChat';
+import { useChat, useAssistantData } from '@/modules/assistant/hooks';
+import { SystemStatusHeader } from '@/modules/assistant/components';
 import { Message } from '@/types/assistant';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -22,6 +23,14 @@ import Markdown from 'react-native-markdown-display';
 export default function AssistantScreen() {
   const [inputText, setInputText] = useState('');
   const { messages, isLoading, error, sendMessage } = useChat();
+  const { 
+    systemStatus, 
+    isLoadingStatus, 
+    refreshSystemStatus, 
+    analyzeRoom, 
+    isAnalyzingRoom,
+    error: systemError 
+  } = useAssistantData();
   const flatListRef = useRef<FlatList>(null);
   const currentTheme = useCurrentTheme();
 
@@ -250,19 +259,19 @@ export default function AssistantScreen() {
       </ThemedView>
       <ThemedText style={[styles.emptyStateTitle, { color: textColor }]}>
         Welcome to LabWatch Assistant
-      </ThemedText>
-      <ThemedText style={[styles.emptyStateDescription, { color: subtleTextColor }]}>
-        I'm here to help you with lab protocols, safety procedures, and answer questions about your lab environment.
+      </ThemedText>      <ThemedText style={[styles.emptyStateDescription, { color: subtleTextColor }]}>
+        I'm here to help you with lab protocols, safety procedures, and answer questions about your lab environment. I have access to real-time monitoring data.
       </ThemedText>
       <ThemedView style={styles.suggestionsContainer}>
         <ThemedText style={[styles.suggestionsTitle, { color: textColor }]}>
           Try asking about:
         </ThemedText>
         {[
-          'Safety protocols for chemical handling',
-          'Emergency evacuation procedures',
-          'Equipment troubleshooting',
-          'Lab room information'
+          'What is the current status of all lab rooms?',
+          'Are there any critical alerts I should know about?',
+          'What are the safety protocols for high temperature alerts?',
+          'How should I respond to air quality warnings?',
+          'What recent incidents need my attention?'
         ].map((suggestion, index) => (
           <TouchableOpacity
             key={index}
@@ -288,8 +297,7 @@ export default function AssistantScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0} // Add offset for iOS tab bar
-      >
-        {error && (
+      >        {error && (
           <Card style={styles.errorCard} paddingSize="md">
             <ThemedView style={styles.errorContent}>
               <Ionicons name="alert-circle" size={20} color={errorColor} />
@@ -302,6 +310,28 @@ export default function AssistantScreen() {
             </ThemedView>
           </Card>
         )}
+
+        {systemError && (
+          <Card style={styles.errorCard} paddingSize="md">
+            <ThemedView style={styles.errorContent}>
+              <Ionicons name="warning" size={20} color={errorColor} />
+              <ThemedText style={[
+                styles.errorText, 
+                { color: errorColor, fontFamily: 'Montserrat-Medium' }
+              ]}>
+                System Status: {systemError}
+              </ThemedText>
+            </ThemedView>
+          </Card>
+        )}
+
+        <SystemStatusHeader
+          systemSummary={systemStatus?.systemSummary}
+          criticalAlerts={systemStatus?.activeAlerts.filter(a => a.severity === 'critical').length || 0}
+          activeRooms={systemStatus?.rooms.filter(r => r.isMonitored).length || 0}
+          onRefresh={refreshSystemStatus}
+          isLoading={isLoadingStatus}
+        />
         
         <FlatList
           ref={flatListRef}
