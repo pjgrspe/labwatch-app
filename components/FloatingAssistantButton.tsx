@@ -1,19 +1,18 @@
 // labwatch-app/components/FloatingAssistantButton.tsx
-import { Layout, Colors } from '@/constants';
+import { Colors, Layout } from '@/constants';
 import { useCurrentTheme, useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
   Animated,
   Dimensions,
+  StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
-import { 
-  PanGestureHandler,
+import {
   GestureHandlerRootView,
-  PanGestureHandlerGestureEvent,
+  PanGestureHandler,
   State
 } from 'react-native-gesture-handler';
 

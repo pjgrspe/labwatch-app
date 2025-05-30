@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "labwatch-app",
+    "name": "Labwatch App",
     "slug": "labwatch-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#101010"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.labwatchapp"

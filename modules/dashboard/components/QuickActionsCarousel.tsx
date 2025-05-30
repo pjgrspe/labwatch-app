@@ -97,40 +97,31 @@ const QuickActionCard: React.FC<QuickAction & { currentThemeColors: any }> = ({
 const QuickActionsCarousel = () => {
   const router = useRouter(); // Correct hook import
   const currentThemeHook = useCurrentTheme(); // Correct hook import
-  const currentThemeColors = Colors[currentThemeHook];
-
-  const quickActions: QuickAction[] = [
+  const currentThemeColors = Colors[currentThemeHook];  const quickActions: QuickAction[] = [
     { 
       label: "Report Incident", 
-      iconName: "alert-circle-outline", // More indicative of an incident
+      iconName: "alert-circle-outline", 
       backgroundColor: currentThemeColors.errorText, 
       priority: 'high',
-      onPress: () => router.push('/(tabs)/incidents' as any) 
-    },
-    { 
+      onPress: () => router.push('/modals/add-incident')
+    },    { 
       label: "Safety Protocols", 
       iconName: "document-text-outline", 
       priority: 'medium',
-      onPress: () => router.push('/(tabs)/more/protocols') 
-    },
-     { 
-      label: "Add New Room", 
-      iconName: "add-circle-outline", 
-      priority: 'medium',
-      onPress: () => router.push('/modals/add-room') // Example route
+      onPress: () => router.push('/(tabs)/more/protocols')
     },
     { 
-      label: "User Settings", // More specific
-      iconName: "person-circle-outline", 
-      priority: 'low',
-      onPress: () => router.push('/profile') // Example route to a user profile/settings
+      label: "Manage Users", 
+      iconName: "people-outline", 
+      priority: 'medium',
+      onPress: () => router.push('/(tabs)/more/admin/manage-users')
     },
-    // { 
-    //   label: "Manage Users", // This might be admin-specific
-    //   iconName: "people-outline", 
-    //   priority: 'low',
-    //   onPress: () => router.push('/(tabs)/more/admin/manage-users') 
-    // },
+    { 
+      label: "Settings", 
+      iconName: "settings-outline", 
+      priority: 'low',
+      onPress: () => router.push('/(tabs)/more/settings')
+    },
   ];
 
   return (

@@ -2,16 +2,17 @@
 import { Card, SectionHeader, ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useCurrentTheme, useThemeColor } from '@/hooks';
-import { TempHumidityData } from '@/types/sensor'; // Assuming this type includes 'name'
+import { TempHumidityData } from '@/types/sensor';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { getStatusColorForDial } from '../utils/colorHelpers'; // Ensure this path is correct
+import { getStatusColorForDial } from '../utils/colorHelpers';
 
 // Define OtherRoomData to include 'name' if it's not in TempHumidityData
 interface OtherRoomData extends TempHumidityData {
   roomId: string;
-  name: string; // Explicitly add name if not in TempHumidityData
+  name: string; 
 }
 
 interface OtherMonitoredRoomsSectionProps {
@@ -98,9 +99,10 @@ const OtherMonitoredRoomsSection: React.FC<OtherMonitoredRoomsSectionProps> = ({
   roomsData,
   onPressViewAll,
 }) => {
-  const sectionTitleColor = useThemeColor({}, 'text'); // For empty state text
-  const iconColor = useThemeColor({}, 'icon'); // For empty state icon
-  const cardBackgroundColor = useThemeColor({}, 'cardBackground'); // For empty state card
+  const router = useRouter();
+  const sectionTitleColor = useThemeColor({}, 'text');
+  const iconColor = useThemeColor({}, 'icon');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
 
   // Note: The parent dashboard.tsx's sectionWrapper handles horizontal padding.
   // This component's main container (styles.container) only needs to manage vertical layout.
@@ -136,17 +138,13 @@ const OtherMonitoredRoomsSection: React.FC<OtherMonitoredRoomsSectionProps> = ({
       <SectionHeader 
         title={title} 
         onPressViewAll={onPressViewAll} 
-      />
-      {/* The cards will respect the sectionWrapper's horizontal padding */}
-      {roomsData.map(room => (
-        <RoomCardDisplay // Renamed to avoid conflict if RoomCard is imported from elsewhere
+      />      {roomsData.map(room => (
+        <RoomCardDisplay
           key={room.roomId}
           room={room}
           onPress={() => {
-            // TODO: Implement navigation to specific room detail, e.g.,
-            // router.push(`/(tabs)/rooms/${room.roomId}`);
-            // For now, or if more appropriate for this section:
-            onPressViewAll(); 
+            // Navigate to specific room detail page
+            router.push(`/(tabs)/rooms/${room.roomId}` as any);
           }}
         />
       ))}
