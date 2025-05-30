@@ -1,9 +1,42 @@
 // labwatch-app/utils/firebaseUtils.ts
-import { db } from '@/FirebaseConfig'; // Ensure db is exported from your FirebaseConfig
-import { Alert } from '@/types/alerts'; // Import Alert type
-import { Incident, NewIncident, UpdateIncident } from '@/types/incidents'; // Adjust path if needed
-import { Room } from '@/types/rooms'; // Import Room type
+import { app, db } from '@/FirebaseConfig'; // Ensure app and db are exported
+import { Alert } from '@/types/alerts';
+import { Incident, NewIncident, UpdateIncident } from '@/types/incidents';
+import { Room } from '@/types/rooms';
 import { Timestamp, addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+
+// --- START: Added for Realtime Database ESP32 ID fetching ---
+import { child, getDatabase, get as getRTDB, ref as rtdbRef } from "firebase/database";
+
+export interface Esp32Device {
+  id: string;   // This will be the ESP32_DEVICE_ID
+  name: string; // For display, will also be the ESP32_DEVICE_ID
+}
+
+export const getAvailableEsp32DeviceIds = async (): Promise<Esp32Device[]> => {
+  try {
+    // Ensure 'app' is correctly initialized and firebaseConfig in APIkeys.ts includes 'databaseURL'
+    const rtdb = getDatabase(app); // 'app' is imported from FirebaseConfig
+    const devicesRefPath = 'esp32_devices_data';
+    const devicesNodeRef = child(rtdbRef(rtdb), devicesRefPath);
+    
+    const snapshot = await getRTDB(devicesNodeRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      // Extract keys (device IDs) from the snapshot
+      return Object.keys(data).map(deviceId => ({
+        id: deviceId,
+        name: deviceId // Use the ID as the name for display
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching ESP32 device IDs from RTDB:", error);
+    return []; 
+  }
+};
+// --- END: Added for Realtime Database ESP32 ID fetching ---
 
 
 export const convertTimestamps = (data: any): any => {
@@ -32,7 +65,6 @@ const incidentsCollection = collection(db, 'incidents');
 export const removeUndefinedValues = (obj: Record<string, any>): Record<string, any> => {
   return Object.entries(obj).reduce((acc, [key, value]) => {
     if (value !== undefined) {
-      // Recursively clean nested objects
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         acc[key] = removeUndefinedValues(value);
       } else {
@@ -45,22 +77,16 @@ export const removeUndefinedValues = (obj: Record<string, any>): Record<string, 
 
 export const addIncident = async (incidentData: NewIncident): Promise<string> => {
   try {
-    // Clean the data before sending to Firestore
     const cleanData = removeUndefinedValues(incidentData);
-    
-    // Security rules require reportedAt to be request.time
-    // Since serverTimestamp() is used as request.time in rules
-    // Let's make sure we're not trying to set it ourselves
     const docRef = await addDoc(incidentsCollection, {
       ...cleanData,
-      // Make sure reportedBy is set correctly
-      reportedBy: cleanData.reportedBy, // This must match auth.uid in rules
+      reportedBy: cleanData.reportedBy, 
       roomId: cleanData.roomId,
       title: cleanData.title,
       description: cleanData.description,
       status: cleanData.status,
       severity: cleanData.severity,
-      reportedAt: serverTimestamp(), // This matches request.time in rules
+      reportedAt: serverTimestamp(), 
       updatedAt: serverTimestamp(),
     });
     return docRef.id;
@@ -97,9 +123,7 @@ export const getIncidentById = async (id: string): Promise<Incident | null> => {
 
 export const updateIncident = async (id: string, updates: UpdateIncident): Promise<void> => {
   try {
-    // Clean the data to remove undefined values before updating
     const cleanUpdates = removeUndefinedValues(updates);
-    
     const docRef = doc(db, 'incidents', id);
     await updateDoc(docRef, {
         ...cleanUpdates,
@@ -121,11 +145,9 @@ export const deleteIncident = async (id: string): Promise<void> => {
   }
 };
 
-
-// --- Helper function to get rooms (you might already have this in RoomService) ---
 export const getRoomsForSelector = async (): Promise<Room[]> => {
   try {
-    const roomsCollection = collection(db, 'rooms'); // Assuming 'rooms' is your collection name
+    const roomsCollection = collection(db, 'rooms'); 
     const q = query(roomsCollection, where('isArchived', '!=', true), orderBy('name', 'asc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => convertTimestamps({ ...doc.data(), id: doc.id } as Room));
@@ -135,12 +157,10 @@ export const getRoomsForSelector = async (): Promise<Room[]> => {
   }
 };
 
-// --- Helper function to get alerts (you might already have this in AlertService) ---
 export const getAlertsForSelector = async (): Promise<Alert[]> => {
   try {
-    const alertsCollection = collection(db, 'alerts'); // Assuming 'alerts' is your collection name
-    // Add any necessary filters, e.g., only non-acknowledged alerts or recent alerts
-    const q = query(alertsCollection, orderBy('timestamp', 'desc')); // Example query
+    const alertsCollection = collection(db, 'alerts'); 
+    const q = query(alertsCollection, orderBy('timestamp', 'desc')); 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => convertTimestamps({ ...doc.data(), id: doc.id } as Alert));
   } catch (error) {
