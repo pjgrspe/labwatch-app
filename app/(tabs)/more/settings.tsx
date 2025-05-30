@@ -1,5 +1,5 @@
 // app/(tabs)/more/settings.tsx
-import { Card, ListItem, ThemedText, ThemedView } from '@/components';
+import { Card, ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { ThemePreference, useAppearanceSettings } from '@/modules/settings/hooks/useAppearanceSettings';
@@ -7,19 +7,18 @@ import { useNotificationSettings } from '@/modules/settings/hooks/useNotificatio
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  ActivityIndicator, 
-  Appearance, 
-  Pressable, 
-  ScrollView, 
-  StyleSheet, 
+import {
+  ActivityIndicator,
+  Alert,
+  Appearance,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
   Switch,
   TouchableOpacity,
-  Alert,
-  View,
-  Text,
-  RefreshControl,
-  Platform
+  View
 } from 'react-native';
 
 // Define interfaces for settings data
@@ -98,17 +97,14 @@ export default function SettingsScreen() {
     isDarkModeActive,
     updateThemePreference,
     isLoadingAppearanceSettings,
-  } = useAppearanceSettings();
-
-  // Define ALL theme colors at the top level
+  } = useAppearanceSettings();  // Define ALL theme colors at the top level
   const containerBackgroundColor = useThemeColor({}, 'background');
   const headerTextColor = useThemeColor({ light: '#444', dark: '#ccc' }, 'text');
   const settingTextColor = useThemeColor({}, 'text');
-  const switchThumbColorEnabled = useThemeColor({ light: "#f5dd4b", dark: "#f5dd4b" }, 'tint');
-  const switchThumbColorDisabled = useThemeColor({ light: "#f4f3f4", dark: "#767577" }, 'icon');
-  const switchTrackColorTrue = useThemeColor({ light: "#81b0ff", dark: "#585858" }, 'tint');
-  const switchTrackColorFalse = useThemeColor({ light: "#767577", dark: "#3e3e3e" }, 'icon');
-  const switchIosBackgroundColor = useThemeColor({ light: "#3e3e3e", dark: "#1c1c1e" }, 'background');
+  const switchThumbColorEnabled = useThemeColor({ light: "#7633FF", dark: "#9966FF" }, 'primaryButton');
+  const switchThumbColorDisabled = useThemeColor({ light: "#E0E0E0", dark: "#6B7280" }, 'icon');
+  const switchTrackColorTrue = useThemeColor({ light: "#4DB8FF", dark: "#0095FF" }, 'accent');
+  const switchTrackColorFalse = useThemeColor({ light: "#D1D5DB", dark: "#4B5563" }, 'icon');  const switchIosBackgroundColor = useThemeColor({ light: "#E5E7EB", dark: "#1F2937" }, 'background');
   const activeThemeButtonBorderColor = useThemeColor({}, 'tint');
   const inactiveThemeButtonBorderColor = useThemeColor({}, 'borderColor');
   const activityIndicatorColor = useThemeColor({}, 'tint');

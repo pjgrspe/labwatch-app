@@ -1,19 +1,19 @@
 // app/(tabs)/more/protocols/index.tsx
-import { Card, ThemedText, ThemedView } from '@/components';
+import { Card } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  FlatList, 
-  StyleSheet, 
-  TouchableOpacity, 
-  RefreshControl, 
-  View, 
-  Text,
+import {
   Alert,
-  TextInput
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface Protocol {

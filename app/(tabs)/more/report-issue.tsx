@@ -5,7 +5,7 @@ import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 interface IssueType {
   id: string;

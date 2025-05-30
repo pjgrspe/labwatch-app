@@ -4,8 +4,8 @@ import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface SystemStatus {
   category: string;

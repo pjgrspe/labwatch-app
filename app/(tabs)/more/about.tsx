@@ -5,7 +5,7 @@ import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { Linking, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function AboutScreen() {
   const backgroundColor = useThemeColor({}, 'background');

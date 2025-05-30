@@ -5,7 +5,7 @@ import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, Alert, Switch } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 
 interface ExportOption {
   id: string;

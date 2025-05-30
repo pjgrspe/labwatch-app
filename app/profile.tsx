@@ -1,19 +1,19 @@
 // labwatch-app/app/profile.tsx
-import { Card, ListItem, ThemedText, ThemedView } from '@/components';
+import { Card, ListItem } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  Image, 
-  ScrollView, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Alert, 
-  RefreshControl,
-  View,
-  Text
+import {
+    Alert,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 // Enhanced User Data with more realistic information

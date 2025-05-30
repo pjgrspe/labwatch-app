@@ -8,7 +8,7 @@ import { MenuSection, ProfileCard, QuickStatsCard, useMoreScreenData } from '@/m
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 
 export default function MoreScreen() {
   const router = useRouter();

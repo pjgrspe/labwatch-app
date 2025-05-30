@@ -1,12 +1,24 @@
-// app/auth/signup.tsx
-import { ThemedText } from '@/components';
+import { Card, ThemedText, ThemedView } from '@/components';
+import { Layout } from '@/constants';
 import { app, auth } from '@/FirebaseConfig';
 import { useThemeColor } from '@/hooks';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getFirestore, setDoc } from 'firebase/firestore'; // Added serverTimestamp
+import { doc, getFirestore, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { Alert, Button, KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const firestore = getFirestore(app);
 
@@ -15,20 +27,29 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const containerBackgroundColor = useThemeColor({}, 'background');
-  const inputBackgroundColor = useThemeColor({ light: '#FFFFFF', dark: '#2C2C2E' }, 'inputBackground');
-  const inputTextColor = useThemeColor({}, 'text');
-  const inputBorderColor = useThemeColor({}, 'borderColor');
+  // Theme colors following your app's pattern
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
+  const inputBorderColor = useThemeColor({}, 'inputBorder');
   const placeholderTextColor = useThemeColor({}, 'inputPlaceholder');
-  const buttonBackgroundColor = useThemeColor({}, 'tint');
-  const titleColor = useThemeColor({}, 'text');
-  const linkTextColor = useThemeColor({}, 'tint');
+  const primaryButtonColor = useThemeColor({}, 'primaryButton');
+  const primaryButtonTextColor = useThemeColor({}, 'primaryButtonText');
+  const tintColor = useThemeColor({}, 'tint');
+  const iconColor = useThemeColor({}, 'icon');
+  const mutedTextColor = useThemeColor({}, 'icon');
 
   const handleSignup = async () => {
     if (!email.trim() || !password.trim() || !fullName.trim()) {
       Alert.alert("Missing Information", "Please fill out all fields.");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
       return;
     }
 
@@ -38,19 +59,18 @@ export default function SignupScreen() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // SIMPLIFIED: Store user info with minimal validation
       await setDoc(doc(firestore, "users", user.uid), {
         uid: user.uid,
         email: user.email,
         fullName: fullName.trim(),
         role: "user",
         status: "pending",
-        createdAt: new Date(), // Use regular Date for simplicity
+        createdAt: new Date(),
       });
 
       Alert.alert(
-        "Signup Successful", 
-        "Your account has been created and is awaiting admin approval.",
+        "Account Created", 
+        "Your account has been created successfully and is awaiting admin approval.",
         [{ text: "OK", onPress: () => router.replace('/auth/pending-approval') }]
       );
     } catch (error: any) {
@@ -62,85 +82,304 @@ export default function SignupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: containerBackgroundColor }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ThemedText style={[styles.title, { color: titleColor }]}>Create Account</ThemedText>
-      <TextInput
-        style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
-        placeholder="Full Name"
-        value={fullName}
-        onChangeText={setFullName}
-        placeholderTextColor={placeholderTextColor}
-        autoCapitalize="words"
-        editable={!isLoading}
-      />
-      <TextInput
-        style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        placeholderTextColor={placeholderTextColor}
-        editable={!isLoading}
-      />
-      <TextInput
-        style={[styles.input, { backgroundColor: inputBackgroundColor, color: inputTextColor, borderColor: inputBorderColor }]}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor={placeholderTextColor}
-        editable={!isLoading}
-      />
-      <View style={styles.buttonContainer}>
-        <Button 
-          title={isLoading ? "Creating Account..." : "Sign Up"} 
-          onPress={handleSignup} 
-          color={buttonBackgroundColor}
-          disabled={isLoading}
-        />
-      </View>
-      <ThemedText 
-        style={styles.loginText} 
-        onPress={() => !isLoading && router.replace('/auth/login')}
+    <ThemedView style={[styles.container, { backgroundColor }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
       >
-        Already have an account? <ThemedText style={{ color: linkTextColor, fontWeight: 'bold' }}>Log In</ThemedText>
-      </ThemedText>
-    </KeyboardAvoidingView>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Image 
+              source={require('../../assets/images/logo-with-text.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <ThemedText style={[styles.title, { color: textColor }]}>
+              Create Account
+            </ThemedText>
+            <ThemedText style={[styles.subtitle, { color: mutedTextColor }]}>
+              Join LabWatch to start monitoring your lab
+            </ThemedText>
+          </View>
+
+          {/* Signup Form */}
+          <Card style={styles.formCard}>
+            <View style={styles.formContainer}>
+              {/* Full Name Input */}
+              <View style={styles.inputGroup}>
+                <ThemedText style={[styles.inputLabel, { color: textColor }]}>
+                  Full Name
+                </ThemedText>
+                <View style={[
+                  styles.inputContainer,
+                  { 
+                    backgroundColor: inputBackgroundColor,
+                    borderColor: inputBorderColor 
+                  }
+                ]}>
+                  <Ionicons 
+                    name="person-outline" 
+                    size={20} 
+                    color={iconColor} 
+                    style={styles.inputIcon} 
+                  />
+                  <TextInput
+                    style={[styles.textInput, { color: textColor }]}
+                    placeholder="Enter your full name"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoCapitalize="words"
+                    placeholderTextColor={placeholderTextColor}
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
+
+              {/* Email Input */}
+              <View style={styles.inputGroup}>
+                <ThemedText style={[styles.inputLabel, { color: textColor }]}>
+                  Email Address
+                </ThemedText>
+                <View style={[
+                  styles.inputContainer,
+                  { 
+                    backgroundColor: inputBackgroundColor,
+                    borderColor: inputBorderColor 
+                  }
+                ]}>
+                  <Ionicons 
+                    name="mail-outline" 
+                    size={20} 
+                    color={iconColor} 
+                    style={styles.inputIcon} 
+                  />
+                  <TextInput
+                    style={[styles.textInput, { color: textColor }]}
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholderTextColor={placeholderTextColor}
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputGroup}>
+                <ThemedText style={[styles.inputLabel, { color: textColor }]}>
+                  Password
+                </ThemedText>
+                <View style={[
+                  styles.inputContainer,
+                  { 
+                    backgroundColor: inputBackgroundColor,
+                    borderColor: inputBorderColor 
+                  }
+                ]}>
+                  <Ionicons 
+                    name="lock-closed-outline" 
+                    size={20} 
+                    color={iconColor} 
+                    style={styles.inputIcon} 
+                  />
+                  <TextInput
+                    style={[styles.textInput, { color: textColor }]}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    placeholderTextColor={placeholderTextColor}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                  >
+                    <Ionicons 
+                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                      size={20} 
+                      color={iconColor} 
+                    />
+                  </TouchableOpacity>
+                </View>
+                <ThemedText style={[styles.passwordHint, { color: mutedTextColor }]}>
+                  Must be at least 6 characters long
+                </ThemedText>
+              </View>
+
+              {/* Info Card */}
+              <View style={[styles.infoCard, { backgroundColor: tintColor + '10' }]}>
+                <Ionicons name="information-circle-outline" size={20} color={tintColor} />
+                <ThemedText style={[styles.infoText, { color: tintColor }]}>
+                  Your account will be reviewed by an administrator before access is granted.
+                </ThemedText>
+              </View>
+
+              {/* Signup Button */}
+              <TouchableOpacity
+                style={[
+                  styles.signupButton,
+                  { backgroundColor: primaryButtonColor },
+                  isLoading && styles.disabledButton
+                ]}
+                onPress={handleSignup}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={primaryButtonTextColor} />
+                    <ThemedText style={[styles.buttonText, { color: primaryButtonTextColor }]}>
+                      Creating Account...
+                    </ThemedText>
+                  </View>
+                ) : (
+                  <ThemedText style={[styles.buttonText, { color: primaryButtonTextColor }]}>
+                    Create Account
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Card>
+
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <ThemedText style={[styles.loginText, { color: mutedTextColor }]}>
+              Already have an account?{' '}
+            </ThemedText>
+            <TouchableOpacity onPress={() => !isLoading && router.replace('/auth/login')}>
+              <ThemedText style={[styles.loginLink, { color: tintColor }]}>
+                Sign In
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: Layout.spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Layout.spacing.xl,
+  },
+  logo: {
+    width: 180,
+    height: 80,
+    marginBottom: Layout.spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: Layout.fontSize.xxl,
+    fontFamily: 'Montserrat-Bold',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Layout.spacing.xs,
   },
-  input: {
-    height: 50,
+  subtitle: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
+  },
+  formCard: {
+    marginBottom: Layout.spacing.lg,
+  },
+  formContainer: {
+    padding: Layout.spacing.lg,
+  },
+  inputGroup: {
+    marginBottom: Layout.spacing.lg,
+  },
+  inputLabel: {
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Medium',
+    marginBottom: Layout.spacing.xs,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    marginBottom: 15,
+    borderRadius: Layout.borderRadius.md,
+    paddingHorizontal: Layout.spacing.md,
+    height: 52,
   },
-  buttonContainer: {
-    marginTop: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
+  inputIcon: {
+    marginRight: Layout.spacing.sm,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+    height: '100%',
+  },
+  eyeButton: {
+    padding: Layout.spacing.xs,
+  },
+  passwordHint: {
+    fontSize: Layout.fontSize.xs,
+    fontFamily: 'Montserrat-Regular',
+    marginTop: Layout.spacing.xs,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: Layout.spacing.md,
+    borderRadius: Layout.borderRadius.md,
+    marginBottom: Layout.spacing.lg,
+    gap: Layout.spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: Layout.fontSize.sm,
+    fontFamily: 'Montserrat-Regular',
+    lineHeight: Layout.fontSize.sm * 1.4,
+  },
+  signupButton: {
+    height: 52,
+    borderRadius: Layout.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Layout.spacing.sm,
+  },
+  buttonText: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loginText: {
-    marginTop: 20,
-    textAlign: 'center',
-    fontSize: 16,
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-Regular',
+  },
+  loginLink: {
+    fontSize: Layout.fontSize.md,
+    fontFamily: 'Montserrat-SemiBold',
   },
 });
