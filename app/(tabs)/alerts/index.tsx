@@ -1,5 +1,6 @@
 // Modified app/(tabs)/alerts/index.tsx
 import { Card, ThemedText, ThemedView } from '@/components';
+import { AlertTester } from '@/components/AlertTester';
 import { ColorName, Colors, Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { AlertService } from '@/modules/alerts/services/AlertService';
@@ -8,17 +9,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  UIManager,
-  View
+    ActivityIndicator,
+    Animated,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    SectionList,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    UIManager,
+    View
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -689,7 +690,14 @@ export default function AlertsListScreen() {
               </ScrollView>
             </View>
           </Animated.View>
-        </View>
+        </View>        {/* Alert Tester Component for Manual Testing */}
+        <AlertTester 
+          onAlertTriggered={(alertType) => {
+            console.log(`Alert triggered: ${alertType}`);
+            // Refresh alerts to show newly triggered alerts
+            fetchAlerts(true);
+          }}
+        />
 
         {sortedAndGroupedAlerts.length === 0 || (sortedAndGroupedAlerts.length === 1 && sortedAndGroupedAlerts[0].data.length === 0) ? (
           <View style={styles.centered}>

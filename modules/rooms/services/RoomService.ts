@@ -62,18 +62,19 @@ export const RoomService = {
 
   // --- START: New method to get all ESP32 Module IDs in use ---
   getAllEsp32ModuleIdsInUse: async (): Promise<Set<string>> => {
-    const assignedIds = new Set<string>();
-    try {
+    const assignedIds = new Set<string>();    try {
       const roomsCollectionRef = collection(db, ROOMS_COLLECTION);
       // Fetch all rooms, regardless of archived status,
       // as an ESP32 assigned to any existing room is considered "in use".
       const querySnapshot = await getDocs(roomsCollectionRef);
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.esp32ModuleId && typeof data.esp32ModuleId === 'string' && data.esp32ModuleId.trim() !== '') {
-          assignedIds.add(data.esp32ModuleId);
-        }
-      });
+      if (querySnapshot && !querySnapshot.empty) {
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.esp32ModuleId && typeof data.esp32ModuleId === 'string' && data.esp32ModuleId.trim() !== '') {
+            assignedIds.add(data.esp32ModuleId);
+          }
+        });
+      }
       return assignedIds;
     } catch (error) {
       console.error("Error fetching all assigned ESP32 module IDs:", error);
@@ -194,19 +195,20 @@ export const RoomService = {
       throw new Error(`Failed to delete room: ${error.message}`);
     }
   },
-
   getSensorsForRoom: async (roomId: string): Promise<RoomSensorData> => {
     const sensors: Partial<RoomSensorData> = {};
     try {
       const sensorsCollectionRef = collection(db, ROOMS_COLLECTION, roomId, SENSORS_SUBCOLLECTION);
       const querySnapshot = await getDocs(sensorsCollectionRef);
-      querySnapshot.forEach(docSnapshot => { // Changed from forEach to docSnapshot
-        const data = docSnapshot.data();
-        const sensorType = data.type as keyof RoomSensorData;
-        if (sensorType) {
-          sensors[sensorType] = convertTimestamps(data) as any;
-        }
-      });
+      if (querySnapshot && !querySnapshot.empty) {
+        querySnapshot.forEach(docSnapshot => { // Changed from forEach to docSnapshot
+          const data = docSnapshot.data();
+          const sensorType = data.type as keyof RoomSensorData;
+          if (sensorType) {
+            sensors[sensorType] = convertTimestamps(data) as any;
+          }
+        });
+      }
       return sensors as RoomSensorData;
     } catch (error) {
       console.error(`Error fetching sensors for room ${roomId}:`, error);
@@ -294,39 +296,38 @@ export const RoomService = {
     getDoc(roomDocRef).then(roomDocSnap => {
         if(roomDocSnap.exists()) {
             roomName = roomDocSnap.data()?.name || roomName;
-        }
-    }).catch(e => console.error(`Failed to fetch room name for ${roomId} during sensor update setup: `, e));
+        }    }).catch(e => console.error(`Failed to fetch room name for ${roomId} during sensor update setup: `, e));
 
     return onSnapshot(sensorsCollectionRef,
       (querySnapshot) => {
         const sensors: Partial<RoomSensorData> = {};
-        querySnapshot.forEach(docSnapshot => {
-          const data = docSnapshot.data();
-          const sensorType = data.type as keyof RoomSensorData; // Assume 'type' field exists in sensor doc
-          const sensorId = docSnapshot.id;
-          const sensorKey = `${roomId}-${sensorId}`;
+        if (querySnapshot && !querySnapshot.empty) {
+          querySnapshot.forEach(docSnapshot => {
+            const data = docSnapshot.data();
+            const sensorType = data.type as keyof RoomSensorData; // Assume 'type' field exists in sensor doc
+            const sensorId = docSnapshot.id;
+            const sensorKey = `${roomId}-${sensorId}`;
 
-          if (sensorType) {
-            const liveData = convertTimestamps(data) as any;
-            sensors[sensorType] = liveData;
+            if (sensorType) {
+              const liveData = convertTimestamps(data) as any;
+              sensors[sensorType] = liveData;
 
-            const lastData = lastProcessedSensorData.get(sensorKey);
-            const hasDataChanged = !lastData || hasSignificantChange(lastData, liveData, sensorType);
+              const lastData = lastProcessedSensorData.get(sensorKey);
+              const hasDataChanged = !lastData || hasSignificantChange(lastData, liveData, sensorType);
 
             if (hasDataChanged) {
               console.log(`Detected data change for ${sensorType} in room ${roomId} (Name: ${roomName}), checking for alerts`);
               lastProcessedSensorData.set(sensorKey, { ...liveData });
 
               // Ensure roomName is resolved or fallback is used
-              const currentRoomName = roomName || `Room ${roomId}`;
-              AlertService.checkForAlerts(roomId, currentRoomName, sensorId, sensorType, liveData)
+              const currentRoomName = roomName || `Room ${roomId}`;              AlertService.checkForAlerts(roomId, currentRoomName, sensorId, sensorType, liveData)
                 .catch(e => console.error(`Error during AlertService.checkForAlerts for ${sensorType} in ${currentRoomName} (Sensor ID: ${sensorId}):`, e));
             }
           }
-        });
-        callback(sensors as RoomSensorData);
-      },
-      (error) => {
+          });
+        }
+        callback(sensors as RoomSensorData);      },
+      (error: any) => {
         console.error(`Firebase onSnapshot error for sensors in room ${roomId}:`, error);
         if (onErrorCallback) { // Use the provided error callback
             onErrorCallback(error);

@@ -1,9 +1,9 @@
 // labwatch-app/modules/assistant/components/SystemStatusHeader.tsx
-import React from 'react';
 import { Card, ThemedText, ThemedView } from '@/components';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface SystemStatusHeaderProps {
@@ -93,12 +93,6 @@ export const SystemStatusHeader: React.FC<SystemStatusHeaderProps> = ({
           </ThemedText>
         </ThemedView>
       </ThemedView>
-      
-      {systemSummary && (
-        <ThemedText style={[styles.summaryText, { color: subtleTextColor }]} numberOfLines={2}>
-          💡 I have access to real-time lab data to help with safety and monitoring questions.
-        </ThemedText>
-      )}
     </Card>
   );
 };

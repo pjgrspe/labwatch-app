@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   // Incident Item Styles
   incidentItemTouchable: {
     marginHorizontal: Layout.spacing.md,
-    marginBottom: Layout.spacing.sm,
+    // marginBottom: Layout.spacing.sm,
   },
   incidentCard: {
     paddingVertical: Layout.spacing.md,

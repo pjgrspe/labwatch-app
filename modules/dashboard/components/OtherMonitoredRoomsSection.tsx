@@ -70,12 +70,11 @@ const RoomCardDisplay: React.FC<{ room: OtherRoomData; onPress: () => void }> = 
               </ThemedView>
             </ThemedView>
           </ThemedView>
-          
-          <ThemedView style={styles.roomMetrics}>
+            <ThemedView style={styles.roomMetrics}>
             <ThemedView style={styles.metricItem}>
               <Ionicons name="thermometer-outline" size={16} color={subtitleColor} />
               <ThemedText style={[styles.metricValue, { color: titleColor }]}>
-                {room.temperature.toFixed(1)}°C
+                {room.temperature != null ? `${room.temperature.toFixed(1)}°C` : '--°C'}
               </ThemedText>
             </ThemedView>
             
@@ -84,7 +83,7 @@ const RoomCardDisplay: React.FC<{ room: OtherRoomData; onPress: () => void }> = 
             <ThemedView style={styles.metricItem}>
               <Ionicons name="water-outline" size={16} color={subtitleColor} />
               <ThemedText style={[styles.metricValue, { color: titleColor }]}>
-                {room.humidity.toFixed(0)}%
+                {room.humidity != null ? `${room.humidity.toFixed(0)}%` : '--%'}
               </ThemedText>
             </ThemedView>
           </ThemedView>

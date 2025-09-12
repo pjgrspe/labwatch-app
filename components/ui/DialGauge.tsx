@@ -1,4 +1,3 @@
-import { Text as ThemedText } from '../Themed';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import { getGaugeRangeForSensor } from '@/modules/alerts/services/AlertService';
@@ -6,6 +5,7 @@ import { interpolateColor, polarToCartesian } from '@/utils/dialGauge';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { Text as ThemedText } from '../Themed';
 
 interface DialGaugeProps {
   value: number;

@@ -1,6 +1,7 @@
 // labwatch-app/modules/alerts/services/AlertService.ts
 import { db } from '@/FirebaseConfig';
 import { AuthService } from '@/modules/auth/services/AuthService'; // ADDED AuthService
+import { RoomService } from '@/modules/rooms/services/RoomService'; // ADDED RoomService
 import { Alert, AlertSeverity, AlertType } from '@/types/alerts';
 import { RoomSensorData } from '@/types/rooms';
 import {
@@ -230,16 +231,36 @@ export const AlertService = {
   },
 
   checkForAlerts: async (
-    roomId: string,
-    roomName: string,
-    sensorId: string,
-    sensorType: keyof RoomSensorData,
-    currentData: any
-  ): Promise<void> => {
-    if (!currentData || !currentData.name) {
-      console.warn(`[AlertService.checkForAlerts] Missing data or name for sensor ${sensorId} in room ${roomId} (${roomName})`);
+  roomId: string,
+  roomName: string,
+  sensorId: string,
+  sensorType: keyof RoomSensorData,
+  currentData: any
+): Promise<void> => {
+  console.log(`[DEBUG] checkForAlerts called for ${sensorType} sensor ${sensorId} in room ${roomName}`);
+  console.log(`[DEBUG] Current data:`, JSON.stringify(currentData, null, 2));
+  
+  // Check if room is monitored before processing alerts
+  try {
+    const room = await RoomService.getRoomById(roomId);
+    if (!room) {
+      console.warn(`[AlertService.checkForAlerts] Room ${roomId} not found, skipping alert check`);
       return;
     }
+    
+    if (!room.isMonitored) {
+      console.log(`[AlertService.checkForAlerts] Room ${roomName} (${roomId}) is not monitored, skipping alert check`);
+      return;
+    }
+  } catch (error) {
+    console.error(`[AlertService.checkForAlerts] Error checking room monitoring status for ${roomId}:`, error);
+    return;
+  }
+  
+  if (!currentData || !currentData.name) {
+    console.warn(`[AlertService.checkForAlerts] Missing data or name for sensor ${sensorId} in room ${roomId} (${roomName})`);
+    return;
+  }
     if (!roomName || roomName.trim() === "") {
       console.error(`[AlertService.checkForAlerts] Invalid roomName (empty or null) for roomId: ${roomId}. Cannot generate alert.`);
       return;
@@ -254,9 +275,11 @@ export const AlertService = {
     );
     const existingAlertsSnapshot = await getDocs(existingAlertQuery);
 
-    switch (sensorType) {
-      case 'tempHumidity':
+    switch (sensorType) {      case 'tempHumidity':
         const thData = currentData as TempHumidityData;
+        console.log(`[DEBUG] Temperature: ${thData.temperature}°C (thresholds: high=${ALERT_THRESHOLDS.TEMPERATURE_HIGH}, critical=${ALERT_THRESHOLDS.TEMPERATURE_CRITICAL_HIGH})`);
+        console.log(`[DEBUG] Humidity: ${thData.humidity}% (thresholds: high=${ALERT_THRESHOLDS.HUMIDITY_HIGH}, critical=${ALERT_THRESHOLDS.HUMIDITY_CRITICAL_HIGH})`);
+        
         let tempAlertType: AlertType | null = null;
         let tempAlertSeverity: AlertSeverity | null = null;
         let tempAlertMessage: string | null = null;

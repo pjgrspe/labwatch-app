@@ -1,6 +1,6 @@
+import { ThemedText, ThemedView } from '@/components';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { ThemedText, ThemedView } from '@/components';
 
 export default function ModalScreen() {
   return (

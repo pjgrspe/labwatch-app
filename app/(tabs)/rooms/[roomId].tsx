@@ -5,6 +5,8 @@ import HeatmapGrid from '@/components/ui/HeatmapGrid';
 import { Colors, Layout } from '@/constants';
 import { app, db } from '@/FirebaseConfig'; // Import app for RTDB
 import { useCurrentTheme, useThemeColor } from '@/hooks';
+import { CameraSection } from '@/modules/cameras/components';
+import { useCameras } from '@/modules/cameras/hooks';
 import { getStatusColorForDial } from '@/modules/dashboard/utils/colorHelpers';
 import { RoomService, ROOMS_COLLECTION as roomsCollectionName } from '@/modules/rooms/services/RoomService';
 import { Room, RoomSensorData } from '@/types/rooms';
@@ -44,7 +46,11 @@ export default function RoomDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isArchiving, setIsArchiving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoadingSensors, setIsLoadingSensors] = useState(false); 
+  const [isLoadingSensors, setIsLoadingSensors] = useState(false);
+  const [testingCameraId, setTestingCameraId] = useState<string | undefined>(undefined);
+
+  // Camera integration
+  const { cameras, isLoading: isLoadingCameras, testConnection } = useCameras(roomId || undefined); 
 
   const currentTheme = useCurrentTheme();
   const themeColors = Colors[currentTheme];
@@ -224,6 +230,22 @@ export default function RoomDetailScreen() {
       }}]);
   };
   const handleEditRoom = () => { if (roomId) router.push(`/modals/edit-room?roomId=${roomId}`); };
+
+  const handleTestCameraConnection = useCallback(async (cameraId: string) => {
+    setTestingCameraId(cameraId);
+    try {
+      const isConnected = await testConnection(cameraId);
+      Alert.alert(
+        'Connection Test',
+        isConnected ? 'Camera connected successfully!' : 'Failed to connect to camera.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert('Connection Test', 'Error testing camera connection.', [{ text: 'OK' }]);
+    } finally {
+      setTestingCameraId(undefined);
+    }
+  }, [testConnection]);
 
   const onRefresh = useCallback(() => {
      setRefreshing(true);
@@ -556,6 +578,17 @@ export default function RoomDetailScreen() {
               </ThemedText>
             </View>
           </Card>
+        )}
+
+        {/* Camera Monitoring Section */}
+        {roomId && (
+          <CameraSection
+            roomId={roomId}
+            cameras={cameras}
+            isLoading={isLoadingCameras}
+            onTestConnection={handleTestCameraConnection}
+            testingCameraId={testingCameraId}
+          />
         )}
 
         {/* Bottom spacing */}

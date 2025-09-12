@@ -91,7 +91,8 @@ export const DashboardHeader: React.FC = () => {
       <Card style={styles.headerCard}>
         <ThemedView style={styles.headerContent}>
           {/* Left Section - Greeting and Time */}
-          <ThemedView style={styles.leftSection}>            <Typography variant="h3" style={styles.greeting}>
+          <ThemedView style={styles.leftSection}>            
+            <Typography variant="h3" style={styles.greeting}>
               {getGreeting()}, Patrick! 👋
             </Typography>
             <ThemedView style={styles.timeContainer}>
@@ -99,7 +100,7 @@ export const DashboardHeader: React.FC = () => {
                 {formatTime(currentTime)}
               </Typography>
               <Typography variant="body2" style={[styles.dateText, { color: mutedColor }]}>
-                • {formatDate(currentTime)}
+                {`• ${formatDate(currentTime)}`}
               </Typography>
             </ThemedView>
           </ThemedView>

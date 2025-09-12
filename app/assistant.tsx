@@ -2,8 +2,8 @@
 import { Card, ThemedText, ThemedView } from '@/components';
 import { Colors, Layout } from '@/constants';
 import { useCurrentTheme, useThemeColor } from '@/hooks';
-import { useChat, useAssistantData } from '@/modules/assistant/hooks';
 import { SystemStatusHeader } from '@/modules/assistant/components';
+import { useAssistantData, useChat } from '@/modules/assistant/hooks';
 import { Message } from '@/types/assistant';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';

@@ -2,6 +2,7 @@
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from "firebase/app";
 import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth'; // Updated auth imports
+import { getDatabase } from 'firebase/database'; // Add Realtime Database import
 import { getFirestore } from 'firebase/firestore'; // Add this import
 import { firebaseConfig } from "./APIkeys";
 
@@ -26,3 +27,6 @@ export const auth = authInstance;
 
 // Initialize Firestore and export it as db
 export const db = getFirestore(app);
+
+// Initialize Realtime Database for ESP32 streaming
+export const rtdb = getDatabase(app);

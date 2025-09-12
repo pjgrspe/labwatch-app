@@ -614,8 +614,6 @@ const styles = StyleSheet.create({
     paddingTop: Layout.spacing.sm,
     paddingHorizontal: Layout.spacing.md,
     paddingBottom: Layout.spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.borderColor,
     elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },

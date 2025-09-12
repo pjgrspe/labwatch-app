@@ -1,4 +1,5 @@
 // labwatch-app/types/room.ts
+import { CameraConfiguration } from './camera';
 import { AirQualityData, TempHumidityData, ThermalImagerData, VibrationData } from './sensor';
 
 export interface RoomSensorData {
@@ -20,6 +21,7 @@ export interface Room {
   archivedAt?: Date; // ADDED: Timestamp for when the room was archived
   esp32ModuleId?: string; // ADDED: ESP32 module ID
   esp32ModuleName?: string; // ADDED: ESP32 module name
+  cameras?: CameraConfiguration[]; // ADDED: Array of cameras in this room
   // You might want to add createdBy (userId) if needed
 }
 
