@@ -7,9 +7,13 @@
     "icon": "./assets/images/logo-with-text.png",
     "scheme": "labwatchapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pjgrspe.labwatchapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,15 @@
         "backgroundColor": "#101010"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.labwatchapp"
+      "package": "com.pjgrspe.labwatchapp",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +46,18 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fe20cdba-1a88-48c4-943c-c93f9bb027c8"
+      }
     }
   }
 }

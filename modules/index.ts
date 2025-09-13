@@ -2,6 +2,7 @@
 export * as Alerts from './alerts';
 export * as Assistant from './assistant';
 export * as Auth from './auth';
+export * as Cameras from './cameras';
 export * as Dashboard from './dashboard';
 export * as More from './more';
 export * as Rooms from './rooms';

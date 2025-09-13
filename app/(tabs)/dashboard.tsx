@@ -32,15 +32,16 @@ export default function DashboardScreen() {
   const router = useRouter();
   const currentTheme = useCurrentTheme();
   const themeColors = Colors[currentTheme];
-  const scrollViewBackgroundColor = useThemeColor({}, 'background');
-
-  const {
+  const scrollViewBackgroundColor = useThemeColor({}, 'background');  const {
     selectedRoomId,
     setSelectedRoomId,
     availableRooms,
+    selectedRoomData,
+    hasRoomData,
     selectedRoomTempHumidity,
     selectedRoomAirQuality,
     selectedRoomThermalData,
+    selectedRoomVibrationData,
     hasAnySensorDataForSelectedRoom,
     recentAlerts,
     otherMonitoredRooms,
@@ -51,15 +52,12 @@ export default function DashboardScreen() {
   const dashboardSections = React.useMemo((): DashboardSection[] => [
     {
       id: 'room-details',
-      type: 'ROOM_DETAILS',
-      data: {
+      type: 'ROOM_DETAILS',      data: {
         rooms: availableRooms,
         selectedRoom: selectedRoomId,
         onSelectRoom: setSelectedRoomId,
-        tempHumidity: selectedRoomTempHumidity,
-        airQuality: selectedRoomAirQuality,
-        thermalData: selectedRoomThermalData,
-        hasAnyData: hasAnySensorDataForSelectedRoom,
+        selectedRoomData: selectedRoomData,
+        hasRoomData: hasRoomData,
       },
     },
     { id: 'spacer-1', type: 'SPACER', height: Layout.spacing.lg },
@@ -84,11 +82,10 @@ export default function DashboardScreen() {
         onPressViewAll: () => router.push('/(tabs)/rooms'),
       },
     },
-    { id: 'spacer-bottom', type: 'SPACER', height: Layout.spacing.xxl },
-  ], [
+    { id: 'spacer-bottom', type: 'SPACER', height: Layout.spacing.xxl },  ], [
     availableRooms, selectedRoomId, setSelectedRoomId,
-    selectedRoomTempHumidity, selectedRoomAirQuality, selectedRoomThermalData,
-    hasAnySensorDataForSelectedRoom, recentAlerts, otherMonitoredRooms, router
+    selectedRoomData, hasRoomData,
+    recentAlerts, otherMonitoredRooms, router
   ]);
 
   const renderDashboardSection = ({ item }: { item: DashboardSection }) => {

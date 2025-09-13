@@ -1,10 +1,10 @@
 // labwatch-app/components/ui/HeatmapGrid.tsx
 // labwatch-app/components/ui/HeatmapGrid.tsx
-import { Text as ThemedText } from '../Themed';
 import { Layout } from '@/constants';
 import { useThemeColor } from '@/hooks';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Text as ThemedText } from '../Themed';
 
 // Define the props for HeatmapGrid
 interface HeatmapGridProps {

@@ -2,8 +2,7 @@
 import { Card, ThemedText, ThemedView } from '@/components';
 import { Colors, Layout } from '@/constants';
 import { useCurrentTheme, useThemeColor } from '@/hooks';
-import { getStatusColorForDial } from '@/modules/dashboard/utils/colorHelpers';
-import { AirQualityData, TempHumidityData, ThermalImagerData, VibrationData } from '@/types/sensor';
+import { Room } from '@/types/rooms';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -13,22 +12,16 @@ interface RoomDetailCardProps {
   rooms: string[];
   selectedRoom: string;
   onSelectRoom: (room: string) => void;
-  tempHumidity?: TempHumidityData;
-  airQuality?: AirQualityData;
-  thermalData?: ThermalImagerData;
-  vibrationData?: VibrationData;
-  hasAnyData: boolean;
+  selectedRoomData?: Room;
+  hasRoomData: boolean;
 }
 
 const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
   rooms,
   selectedRoom,
   onSelectRoom,
-  tempHumidity,
-  airQuality,
-  thermalData,
-  vibrationData,
-  hasAnyData,
+  selectedRoomData,
+  hasRoomData,
 }) => {
   const sectionTitleColor = useThemeColor({}, 'text');
   const currentTheme = useCurrentTheme();
@@ -38,41 +31,41 @@ const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
   const tintColor = useThemeColor({}, 'tint');
   const subtleTextColor = useThemeColor({}, 'icon');
 
-  // Status indicator for overall room health
-  const getRoomHealthStatus = () => {
-    const statuses = [
-      tempHumidity?.status,
-      airQuality?.aqiLevel || airQuality?.status,
-      vibrationData?.status
-    ].filter(Boolean);
-    
-    if (statuses.includes('critical')) return 'critical';
-    if (statuses.includes('warning') || statuses.includes('moderate')) return 'warning';
-    return 'normal';
+  // Status indicator for room monitoring
+  const getRoomMonitoringStatus = () => {
+    if (!selectedRoomData) return 'unknown';
+    if (selectedRoomData.isArchived) return 'archived';
+    if (selectedRoomData.isMonitored) return 'active';
+    return 'inactive';
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'critical': return 'alert-circle';
-      case 'warning': return 'warning';
-      default: return 'checkmark-circle';
+      case 'archived': return 'archive-outline';
+      case 'active': return 'checkmark-circle';
+      case 'inactive': return 'pause-circle';
+      default: return 'help-circle';
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'critical': return themeColors.errorText;
-      case 'warning': return themeColors.warningText;
-      default: return themeColors.successText;
+      case 'archived': return themeColors.disabledText;
+      case 'active': return themeColors.successText;
+      case 'inactive': return themeColors.warningText;
+      default: return themeColors.icon;
     }
   };
 
-  const roomHealthStatus = getRoomHealthStatus();
+  const roomMonitoringStatus = getRoomMonitoringStatus();
 
-  // Get active sensor count
-  const getActiveSensorCount = () => {
-    return [tempHumidity, airQuality, thermalData, vibrationData].filter(Boolean).length;
-  };  return (
+  // Format creation date
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
+  };return (
     <ThemedView style={styles.container}>
       {/* Single Unified Card */}
       <Card style={[styles.unifiedCard, { backgroundColor: cardBackgroundColor }]}>
@@ -84,12 +77,12 @@ const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
               <ThemedText style={[styles.headerTitle, { color: sectionTitleColor }]}>
                 Room Overview
               </ThemedText>
-            </ThemedView>            {hasAnyData && selectedRoom !== 'No Rooms Available' && (
+            </ThemedView>            {hasRoomData && selectedRoom !== 'No Rooms Available' && (
               <ThemedView style={styles.headerRight}>
-                <ThemedView style={[styles.statusBadge, { backgroundColor: getStatusColor(roomHealthStatus) + '15', borderColor: getStatusColor(roomHealthStatus) }]}>
-                  <Ionicons name={getStatusIcon(roomHealthStatus)} size={16} color={getStatusColor(roomHealthStatus)} />
-                  <ThemedText style={[styles.statusText, { color: getStatusColor(roomHealthStatus) }]}>
-                    {roomHealthStatus.toUpperCase()}
+                <ThemedView style={[styles.statusBadge, { backgroundColor: getStatusColor(roomMonitoringStatus) + '15', borderColor: getStatusColor(roomMonitoringStatus) }]}>
+                  <Ionicons name={getStatusIcon(roomMonitoringStatus)} size={16} color={getStatusColor(roomMonitoringStatus)} />
+                  <ThemedText style={[styles.statusText, { color: getStatusColor(roomMonitoringStatus) }]}>
+                    {roomMonitoringStatus.toUpperCase()}
                   </ThemedText>
                 </ThemedView>
               </ThemedView>
@@ -101,89 +94,78 @@ const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
             selectedRoom={selectedRoom}
             onSelectRoom={onSelectRoom}
           />
-        </ThemedView>
-
-        {/* Content Section */}
-        {selectedRoom !== 'No Rooms Available' && hasAnyData ? (
+        </ThemedView>        {/* Content Section */}
+        {selectedRoom !== 'No Rooms Available' && hasRoomData && selectedRoomData ? (
           <ThemedView style={styles.contentSection}>
             <ThemedView style={styles.metricsGrid}>
-              {/* Temperature & Humidity */}
-              {tempHumidity && (
-                <ThemedView style={styles.metricItem}>
-                  <ThemedView style={[styles.metricIcon, { backgroundColor: tintColor + '15' }]}>
-                    <Ionicons name="thermometer-outline" size={20} color={tintColor} />
-                  </ThemedView>
-                  <ThemedView style={styles.metricContent}>
-                    <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
-                      Environment
-                    </ThemedText>
-                    <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
-                      {tempHumidity.temperature.toFixed(1)}°C • {tempHumidity.humidity.toFixed(0)}%
-                    </ThemedText>
-                    <ThemedView style={[styles.statusDot, { backgroundColor: getStatusColorForDial(tempHumidity.status, currentTheme) }]} />
-                  </ThemedView>
-                </ThemedView>
-              )}
 
-              {/* Air Quality */}
-              {airQuality && (
-                <ThemedView style={styles.metricItem}>
-                  <ThemedView style={[styles.metricIcon, { backgroundColor: themeColors.successText + '15' }]}>
-                    <Ionicons name="leaf-outline" size={20} color={themeColors.successText} />
-                  </ThemedView>
-                  <ThemedView style={styles.metricContent}>
-                    <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
-                      Air Quality
-                    </ThemedText>
-                    <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
-                      PM2.5: {airQuality.pm25.toFixed(1)} μg/m³
-                    </ThemedText>
-                    <ThemedView style={[styles.statusDot, { backgroundColor: getStatusColorForDial(airQuality.aqiLevel || airQuality.status, currentTheme) }]} />
-                  </ThemedView>
+              {/* Location */}
+              <ThemedView style={styles.metricItem}>
+                <ThemedView style={[styles.metricIcon, { backgroundColor: themeColors.successText + '15' }]}>
+                  <Ionicons name="location-outline" size={20} color={themeColors.successText} />
                 </ThemedView>
-              )}
+                <ThemedView style={styles.metricContent}>
+                  <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
+                    Location
+                  </ThemedText>
+                  <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
+                    {selectedRoomData.location}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
 
-              {/* Thermal */}
-              {thermalData && (
+              {/* ESP32 Module */}
+              {selectedRoomData.esp32ModuleId && (
                 <ThemedView style={styles.metricItem}>
                   <ThemedView style={[styles.metricIcon, { backgroundColor: themeColors.warningText + '15' }]}>
-                    <Ionicons name="camera-outline" size={20} color={themeColors.warningText} />
+                    <Ionicons name="hardware-chip-outline" size={20} color={themeColors.warningText} />
                   </ThemedView>
                   <ThemedView style={styles.metricContent}>
                     <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
-                      Thermal
+                      ESP32 Module
                     </ThemedText>
                     <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
-                      Avg: {thermalData.avgTemp.toFixed(1)}°C
+                      {selectedRoomData.esp32ModuleName || selectedRoomData.esp32ModuleId}
                     </ThemedText>
-                    <ThemedView style={[styles.statusDot, { backgroundColor: getStatusColorForDial('normal', currentTheme) }]} />
                   </ThemedView>
                 </ThemedView>
               )}
 
-              {/* Vibration */}
-              {vibrationData && (
-                <ThemedView style={styles.metricItem}>
-                  <ThemedView style={[styles.metricIcon, { backgroundColor: themeColors.accent + '15' }]}>
-                    <Ionicons name="pulse-outline" size={20} color={themeColors.accent} />
-                  </ThemedView>
-                  <ThemedView style={styles.metricContent}>
-                    <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
-                      Vibration
-                    </ThemedText>
-                    <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
-                      {vibrationData.rmsAcceleration.toFixed(2)} g
-                    </ThemedText>
-                    <ThemedView style={[styles.statusDot, { backgroundColor: getStatusColorForDial(vibrationData.status || 'normal', currentTheme) }]} />
-                  </ThemedView>
+              {/* Created Date */}
+              <ThemedView style={styles.metricItem}>
+                <ThemedView style={[styles.metricIcon, { backgroundColor: themeColors.accent + '15' }]}>
+                  <Ionicons name="calendar-outline" size={20} color={themeColors.accent} />
                 </ThemedView>
-              )}
+                <ThemedView style={styles.metricContent}>
+                  <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
+                    Created
+                  </ThemedText>
+                  <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
+                    {formatDate(selectedRoomData.createdAt)}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+
+              {/* Monitoring Status */}
+              <ThemedView style={styles.metricItem}>
+                <ThemedView style={[styles.metricIcon, { backgroundColor: getStatusColor(roomMonitoringStatus) + '15' }]}>
+                  <Ionicons name="pulse-outline" size={20} color={getStatusColor(roomMonitoringStatus)} />
+                </ThemedView>
+                <ThemedView style={styles.metricContent}>
+                  <ThemedText style={[styles.metricLabel, { color: subtleTextColor }]}>
+                    Monitoring
+                  </ThemedText>
+                  <ThemedText style={[styles.metricValue, { color: sectionTitleColor }]}>
+                    {selectedRoomData.isMonitored ? 'Active' : 'Inactive'}
+                  </ThemedText>
+                  <ThemedView style={[styles.statusDot, { backgroundColor: getStatusColor(roomMonitoringStatus) }]} />
+                </ThemedView>
+              </ThemedView>
             </ThemedView>
-          </ThemedView>
-        ) : (
+          </ThemedView>        ) : (
           <ThemedView style={styles.emptyContentSection}>
             <Ionicons 
-              name={selectedRoom === 'No Rooms Available' ? "home-outline" : "analytics-outline"} 
+              name={selectedRoom === 'No Rooms Available' ? "home-outline" : "information-circle-outline"} 
               size={48} 
               color={iconColor} 
               style={styles.emptyStateIcon}
@@ -191,13 +173,13 @@ const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
             <ThemedText style={[styles.emptyStateTitle, { color: sectionTitleColor }]}>
               {selectedRoom === 'No Rooms Available' 
                 ? 'No Rooms Available' 
-                : 'No Sensor Data'
+                : 'No Room Data'
               }
             </ThemedText>
             <ThemedText style={[styles.emptyStateMessage, { color: iconColor }]}>
               {selectedRoom === 'No Rooms Available' 
                 ? 'Please configure room monitoring to get started.' 
-                : `No sensor data available for ${selectedRoom}. Check your sensor connections.`
+                : `Room information for ${selectedRoom} is not available.`
               }
             </ThemedText>
           </ThemedView>

@@ -13,8 +13,11 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { LogBox, View } from 'react-native';
 import 'react-native-get-random-values'; // For uuid
+
+// Suppress LogBox warnings and errors from appearing on screen
+LogBox.ignoreAllLogs(true);
 
 SplashScreen.preventAutoHideAsync();
 

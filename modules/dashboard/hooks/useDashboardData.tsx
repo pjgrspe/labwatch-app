@@ -8,6 +8,7 @@ import {
   AirQualityData,
   TempHumidityData,
   ThermalImagerData,
+  VibrationData,
 } from '@/types/sensor';
 import { useGlobalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,12 +32,19 @@ export function useDashboardData() {
     const unsubscribeRooms = RoomService.onRoomsUpdate(
       (fetchedRooms) => {
         const safeFetchedRooms = fetchedRooms || []; // Guard
+        console.log(`[Dashboard] Fetched rooms:`, safeFetchedRooms.map(r => ({ 
+          id: r.id, 
+          name: r.name, 
+          esp32ModuleId: r.esp32ModuleId,
+          isMonitored: r.isMonitored 
+        })));
         setAllRooms(safeFetchedRooms);
         if (safeFetchedRooms.length > 0) {
           const targetRoomId = initialRoomIdFromParams && safeFetchedRooms.some(r => r.id === initialRoomIdFromParams)
             ? initialRoomIdFromParams
             : safeFetchedRooms[0].id;
           if (selectedRoomId !== targetRoomId) {
+            console.log(`[Dashboard] Selecting room: ${targetRoomId}`);
             setSelectedRoomId(targetRoomId);
           }
         } else {
@@ -78,6 +86,11 @@ export function useDashboardData() {
       unsubscribeSensors = RoomService.onRoomSensorsUpdate(
         selectedRoomId,
         (sensors) => {
+          console.log(`[Dashboard] Sensor data received for room ${selectedRoomId}:`, sensors);
+          console.log(`[Dashboard] Sensor data keys:`, Object.keys(sensors || {}));
+          console.log(`[Dashboard] hasAnySensorDataForSelectedRoom will be:`, 
+            sensors ? Object.values(sensors).some(sensor => sensor !== undefined) : false
+          );
           setCurrentRoomSensorData(sensors); // sensors should be RoomSensorData | null from service
           setIsLoadingSensors(false);
         },
@@ -134,14 +147,30 @@ export function useDashboardData() {
     }
     setRefreshing(false);
   }, [selectedRoomId]);
-
-  const hasAnySensorDataForSelectedRoom = currentRoomSensorData
-    ? Object.values(currentRoomSensorData).some(sensor => sensor !== undefined)
-    : false;
-
+  // Enhanced sensor data validation
   const selectedRoomTempHumidity = currentRoomSensorData?.tempHumidity as TempHumidityData | undefined;
   const selectedRoomAirQuality = currentRoomSensorData?.airQuality as AirQualityData | undefined;
   const selectedRoomThermalData = currentRoomSensorData?.thermalImager as ThermalImagerData | undefined;
+  const selectedRoomVibrationData = currentRoomSensorData?.vibration as VibrationData | undefined;
+
+  // Better validation for sensor data existence
+  const hasAnySensorDataForSelectedRoom = currentRoomSensorData
+    ? [selectedRoomTempHumidity, selectedRoomAirQuality, selectedRoomThermalData, selectedRoomVibrationData]
+        .some(sensor => sensor !== undefined && sensor !== null && 
+              ((sensor as any)?.temperature !== undefined || 
+               (sensor as any)?.pm25 !== undefined || 
+               (sensor as any)?.avgTemp !== undefined || 
+               (sensor as any)?.rmsAcceleration !== undefined))
+    : false;
+
+  console.log(`[Dashboard] Enhanced sensor data check:`, {
+    currentRoomSensorData: !!currentRoomSensorData,
+    tempHumidity: !!selectedRoomTempHumidity,
+    airQuality: !!selectedRoomAirQuality,
+    thermalData: !!selectedRoomThermalData,
+    vibrationData: !!selectedRoomVibrationData,
+    hasAnySensorDataForSelectedRoom
+  });
 
   const otherMonitoredRooms = useMemo(() => {
     return (allRooms || []) // Guard allRooms
@@ -156,17 +185,18 @@ export function useDashboardData() {
         status: 'normal' as TempHumidityData['status'],
         timestamp: new Date(),
       }));
-  }, [allRooms, selectedRoomId]);
-
-  return {
+  }, [allRooms, selectedRoomId]);  return {
     selectedRoomId: selectedRoomObject?.name || 'No Rooms Available',
     setSelectedRoomId: handleSelectRoomByName,
     availableRooms: availableRoomNames,
+    selectedRoomData: selectedRoomObject,
+    hasRoomData: !!selectedRoomObject,
     isLoading: isLoadingRooms || (selectedRoomId !== null && isLoadingSensors) || isLoadingAlerts, 
 
     selectedRoomTempHumidity,
     selectedRoomAirQuality,
     selectedRoomThermalData,
+    selectedRoomVibrationData,
     hasAnySensorDataForSelectedRoom,
 
     recentAlerts, 
